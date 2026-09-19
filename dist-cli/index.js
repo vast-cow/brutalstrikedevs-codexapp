@@ -2,8 +2,8 @@
 
 // src/cli/index.ts
 import { createServer as createServer2 } from "http";
-import { chmodSync as chmodSync2, createWriteStream, existsSync as existsSync7, mkdirSync as mkdirSync2 } from "fs";
-import { readFile as readFile5, stat as stat7, writeFile as writeFile6 } from "fs/promises";
+import { chmodSync as chmodSync2, createWriteStream, existsSync as existsSync6, mkdirSync as mkdirSync2 } from "fs";
+import { readFile as readFile5, stat as stat7, writeFile as writeFile5 } from "fs/promises";
 import { homedir as homedir7, networkInterfaces } from "os";
 import { isAbsolute as isAbsolute4, join as join10, resolve as resolve3 } from "path";
 import { spawn as spawn5 } from "child_process";
@@ -200,23 +200,23 @@ function parseApprovalPolicy(value) {
 // src/server/httpServer.ts
 import { fileURLToPath } from "url";
 import { dirname as dirname5, extname as extname4, isAbsolute as isAbsolute3, join as join9 } from "path";
-import { existsSync as existsSync6 } from "fs";
-import { writeFile as writeFile5, stat as stat6 } from "fs/promises";
+import { existsSync as existsSync5 } from "fs";
+import { writeFile as writeFile4, stat as stat6 } from "fs/promises";
 import express from "express";
 
 // src/server/codexAppServerBridge.ts
 import { spawn as spawn4, spawnSync as spawnSync4 } from "child_process";
 import { createHash as createHash2, randomBytes as randomBytes2, randomUUID as randomUUID2 } from "crypto";
-import { mkdtemp as mkdtemp3, readFile as readFile3, readdir as readdir3, rename as rename2, rm as rm4, mkdir as mkdir4, stat as stat4, lstat as lstat2, realpath, utimes } from "fs/promises";
-import { createReadStream as createReadStream2, existsSync as existsSync4, readFileSync as readFileSync2, statSync } from "fs";
+import { mkdtemp as mkdtemp2, readFile as readFile3, readdir as readdir3, rename as rename2, rm as rm4, mkdir as mkdir3, stat as stat4, lstat, realpath, utimes } from "fs/promises";
+import { createReadStream as createReadStream2, existsSync as existsSync3, readFileSync as readFileSync2, statSync } from "fs";
 import { request as httpRequest2 } from "http";
 import { request as httpsRequest2 } from "https";
 import { homedir as homedir5 } from "os";
-import { tmpdir as tmpdir4 } from "os";
+import { tmpdir as tmpdir3 } from "os";
 import { basename as basename4, dirname as dirname2, extname as extname2, isAbsolute as isAbsolute2, join as join6, relative, resolve as resolve2, sep } from "path";
 import { createInterface } from "readline";
 import { once } from "events";
-import { writeFile as writeFile4 } from "fs/promises";
+import { writeFile as writeFile3 } from "fs/promises";
 
 // src/server/accountRoutes.ts
 import { spawn } from "child_process";
@@ -2466,11 +2466,9 @@ async function handleReviewRoutes(req, res, url, context) {
 
 // src/server/skillsRoutes.ts
 import { spawn as spawn3 } from "child_process";
-import { mkdtemp as mkdtemp2, readFile as readFile2, readdir as readdir2, rm as rm3, mkdir as mkdir3, stat as stat3, lstat, readlink, symlink } from "fs/promises";
-import { existsSync as existsSync2 } from "fs";
-import { homedir as homedir3, tmpdir as tmpdir3 } from "os";
+import { readFile as readFile2, readdir as readdir2, rm as rm3, stat as stat3 } from "fs/promises";
+import { homedir as homedir3 } from "os";
 import { join as join4 } from "path";
-import { writeFile as writeFile3 } from "fs/promises";
 
 // src/utils/commandInvocation.ts
 import { spawnSync as spawnSync2 } from "child_process";
@@ -2585,9 +2583,6 @@ function deriveSkillPathInfo(skillPath, knownPaths = /* @__PURE__ */ new Set()) 
 function getSkillsInstallDir() {
   return join4(getCodexHomeDir2(), "skills");
 }
-function getSharedSkillsInstallDir() {
-  return join4(getSkillsInstallDir(), "shared_skills");
-}
 var DEFAULT_COMMAND_TIMEOUT_MS = 12e4;
 var SKILL_SEARCH_METADATA_LIMIT = 20;
 var SKILL_SEARCH_METADATA_CONCURRENCY = 4;
@@ -2694,21 +2689,6 @@ function withTimeout(promise, ms, label) {
     );
   });
 }
-async function detectUserSkillsDir(appServer) {
-  try {
-    const result = await appServer.rpc("skills/list", {});
-    for (const entry of result.data ?? []) {
-      for (const skill of entry.skills ?? []) {
-        if (skill.scope !== "user" || !skill.path) continue;
-        const skillInfo = deriveSkillPathInfo(skill.path);
-        if (!skillInfo) continue;
-        return skillInfo.installDir;
-      }
-    }
-  } catch {
-  }
-  return getSkillsInstallDir();
-}
 async function ensureInstalledSkillIsValid(appServer, skillPath) {
   const result = await appServer.rpc("skills/list", { forceReload: true });
   const normalized = skillPath.endsWith("/SKILL.md") ? skillPath : `${skillPath}/SKILL.md`;
@@ -2718,22 +2698,6 @@ async function ensureInstalledSkillIsValid(appServer, skillPath) {
         throw new Error(error.message || "Installed skill is invalid");
       }
     }
-  }
-}
-async function runGitFetchWithRefLockRetry(repoDir, args = ["fetch", "origin"]) {
-  try {
-    await runCommand2("git", args, { cwd: repoDir });
-  } catch (error) {
-    const message = getErrorMessage4(error, "");
-    if (!message.includes("cannot lock ref 'refs/remotes/origin/")) throw error;
-    const branchMatch = message.match(/refs\/remotes\/origin\/([^\s':]+)/);
-    if (!branchMatch?.[1]) throw error;
-    const refPath = join4(repoDir, ".git", "refs", "remotes", "origin", branchMatch[1]);
-    try {
-      await rm3(refPath, { force: true });
-    } catch {
-    }
-    await runCommand2("git", args, { cwd: repoDir });
   }
 }
 async function buildLocalHubEntry(info) {
@@ -2944,24 +2908,6 @@ function groupRpcSkillRecords(skills) {
     enabled: preferred.enabled ?? anyEnabled
   }));
 }
-var GITHUB_DEVICE_CLIENT_ID = "Iv1.b507a08c87ecfe98";
-var DEFAULT_SKILLS_SYNC_REPO_NAME = "codexskills";
-var SKILLS_SYNC_MANIFEST_PATH = "installed-skills.json";
-var SYNC_UPSTREAM_SKILLS_OWNER = "OpenClawAndroid";
-var SYNC_UPSTREAM_SKILLS_REPO = "skills";
-var PRIVATE_SYNC_BRANCH = "main";
-var PUBLIC_UPSTREAM_BRANCH_ANDROID = "android";
-var PUBLIC_UPSTREAM_BRANCH_DEFAULT = "main";
-var startupSkillsSyncInitialized = false;
-var startupSyncStatus = {
-  inProgress: false,
-  mode: "idle",
-  branch: PRIVATE_SYNC_BRANCH,
-  lastAction: "not-started",
-  lastRunAtIso: "",
-  lastSuccessAtIso: "",
-  lastError: ""
-};
 async function scanInstalledSkillsFromDir(skillsDir) {
   const map = /* @__PURE__ */ new Map();
   try {
@@ -2988,9 +2934,7 @@ async function collectInstalledSkillsMap(appServer) {
     const result = await appServer.rpc("skills/list", {});
     for (const entry of result.data ?? []) {
       for (const skill of groupRpcSkillRecords(entry.skills ?? [])) {
-        if (skill.name) {
-          installedMap.set(skill.name, { name: skill.name, path: skill.path ?? "", enabled: skill.enabled !== false });
-        }
+        if (skill.name) installedMap.set(skill.name, { name: skill.name, path: skill.path ?? "", enabled: skill.enabled !== false });
       }
     }
   } catch {
@@ -3000,724 +2944,16 @@ async function collectInstalledSkillsMap(appServer) {
 function extractSkillFrontmatterField(markdown, fieldName) {
   const lines = markdown.split(/\r?\n/);
   if (lines[0]?.trim() !== "---") return "";
-  const frontmatter = [];
-  for (let index = 1; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (line.trim() === "---") break;
-    frontmatter.push(line);
-  }
-  const escapedFieldName = fieldName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  const fieldPattern = new RegExp(`^${escapedFieldName}\\s*:`, "iu");
-  const valuePattern = new RegExp(`^${escapedFieldName}\\s*:\\s*`, "iu");
-  const fieldLine = frontmatter.find((line) => fieldPattern.test(line.trim()));
-  if (!fieldLine) return "";
-  return fieldLine.replace(valuePattern, "").replace(/^['"]|['"]$/gu, "").trim();
+  const closingIndex = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
+  if (closingIndex < 0) return "";
+  const escaped = fieldName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const match = lines.slice(1, closingIndex).find((line) => new RegExp(`^${escaped}\\s*:`, "iu").test(line.trim()));
+  return match?.replace(new RegExp(`^${escaped}\\s*:\\s*`, "iu"), "").replace(/^['"]|['"]$/gu, "").trim() ?? "";
 }
 function extractSkillDescriptionFromMarkdown(markdown) {
-  const frontmatterDescription = extractSkillFrontmatterField(markdown, "description");
-  if (frontmatterDescription) return frontmatterDescription;
-  const lines = markdown.split(/\r?\n/);
-  let inCodeFence = false;
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (line.startsWith("```")) {
-      inCodeFence = !inCodeFence;
-      continue;
-    }
-    if (inCodeFence || line.length === 0) continue;
-    if (line.startsWith("#")) continue;
-    if (line.startsWith(">")) continue;
-    if (line.startsWith("- ") || line.startsWith("* ")) continue;
-    return line;
-  }
-  return "";
-}
-function getSkillsSyncStatePath() {
-  return join4(getCodexHomeDir2(), "skills-sync.json");
-}
-async function readSkillsSyncState() {
-  try {
-    const raw = await readFile2(getSkillsSyncStatePath(), "utf8");
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-async function writeSkillsSyncState(state) {
-  await writeFile3(getSkillsSyncStatePath(), JSON.stringify(state), "utf8");
-}
-async function getGithubJson(url, token, method = "GET", body) {
-  const resp = await fetch(url, {
-    method,
-    headers: {
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "codex-web-local"
-    },
-    body: body ? JSON.stringify(body) : void 0
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`GitHub API ${method} ${url} failed (${resp.status}): ${text}`);
-  }
-  return await resp.json();
-}
-async function startGithubDeviceLogin() {
-  const resp = await fetch("https://github.com/login/device/code", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "codex-web-local"
-    },
-    body: new URLSearchParams({
-      client_id: GITHUB_DEVICE_CLIENT_ID,
-      scope: "repo read:user"
-    })
-  });
-  if (!resp.ok) {
-    throw new Error(`GitHub device flow init failed (${resp.status})`);
-  }
-  return await resp.json();
-}
-async function completeGithubDeviceLogin(deviceCode) {
-  const resp = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "codex-web-local"
-    },
-    body: new URLSearchParams({
-      client_id: GITHUB_DEVICE_CLIENT_ID,
-      device_code: deviceCode,
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code"
-    })
-  });
-  if (!resp.ok) {
-    throw new Error(`GitHub token exchange failed (${resp.status})`);
-  }
-  const payload = await resp.json();
-  if (!payload.access_token) return { token: null, error: payload.error || "unknown_error" };
-  return { token: payload.access_token, error: null };
-}
-function isAndroidLikeRuntime() {
-  if (process.platform === "android") return true;
-  if (existsSync2("/data/data/com.termux")) return true;
-  if (process.env.TERMUX_VERSION) return true;
-  const prefix = process.env.PREFIX?.toLowerCase() ?? "";
-  if (prefix.includes("/com.termux/")) return true;
-  const proot = process.env.PROOT_TMP_DIR?.toLowerCase() ?? "";
-  return proot.length > 0;
-}
-function getPreferredPublicUpstreamBranch() {
-  return isAndroidLikeRuntime() ? PUBLIC_UPSTREAM_BRANCH_ANDROID : PUBLIC_UPSTREAM_BRANCH_DEFAULT;
-}
-function isUpstreamSkillsRepo(repoOwner, repoName) {
-  return repoOwner.toLowerCase() === SYNC_UPSTREAM_SKILLS_OWNER.toLowerCase() && repoName.toLowerCase() === SYNC_UPSTREAM_SKILLS_REPO.toLowerCase();
-}
-async function resolveGithubUsername(token) {
-  const user = await getGithubJson("https://api.github.com/user", token);
-  return user.login;
-}
-async function ensurePrivateForkFromUpstream(token, username, repoName) {
-  const repoUrl = `https://api.github.com/repos/${username}/${repoName}`;
-  let created = false;
-  const existing = await fetch(repoUrl, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "codex-web-local"
-    }
-  });
-  if (existing.ok) {
-    const details = await existing.json();
-    if (details.private === true) return;
-    await getGithubJson(repoUrl, token, "PATCH", { private: true });
-    return;
-  }
-  if (existing.status !== 404) {
-    throw new Error(`Failed to check personal repo existence (${existing.status})`);
-  }
-  await getGithubJson(
-    "https://api.github.com/user/repos",
-    token,
-    "POST",
-    { name: repoName, private: true, auto_init: false, description: "Codex skills private mirror sync" }
-  );
-  created = true;
-  let ready = false;
-  for (let i = 0; i < 20; i++) {
-    const check = await fetch(repoUrl, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "codex-web-local"
-      }
-    });
-    if (check.ok) {
-      ready = true;
-      break;
-    }
-    await new Promise((resolve4) => setTimeout(resolve4, 1e3));
-  }
-  if (!ready) throw new Error("Private mirror repo was created but is not available yet");
-  if (!created) return;
-  const tmp = await mkdtemp2(join4(tmpdir3(), "codex-skills-seed-"));
-  try {
-    const upstreamUrl = `https://github.com/${SYNC_UPSTREAM_SKILLS_OWNER}/${SYNC_UPSTREAM_SKILLS_REPO}.git`;
-    const branch = PRIVATE_SYNC_BRANCH;
-    try {
-      await runCommand2("git", ["clone", "--depth", "1", "--single-branch", "--branch", branch, upstreamUrl, tmp]);
-    } catch {
-      await runCommand2("git", ["clone", "--depth", "1", upstreamUrl, tmp]);
-    }
-    const privateRemote = toGitHubTokenRemote(username, repoName, token);
-    await runCommand2("git", ["remote", "set-url", "origin", privateRemote], { cwd: tmp });
-    try {
-      await runCommand2("git", ["checkout", "-B", branch], { cwd: tmp });
-    } catch {
-    }
-    await runCommand2("git", ["push", "-u", "origin", `HEAD:${branch}`], { cwd: tmp });
-  } finally {
-    await rm3(tmp, { recursive: true, force: true });
-  }
-}
-async function readRemoteSkillsManifest(token, repoOwner, repoName) {
-  const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${SKILLS_SYNC_MANIFEST_PATH}`;
-  const resp = await fetch(url, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "codex-web-local"
-    }
-  });
-  if (resp.status === 404) return [];
-  if (!resp.ok) throw new Error(`Failed to read remote manifest (${resp.status})`);
-  const payload = await resp.json();
-  const content = payload.content ? Buffer.from(payload.content.replace(/\n/g, ""), "base64").toString("utf8") : "[]";
-  const parsed = JSON.parse(content);
-  if (!Array.isArray(parsed)) return [];
-  const skills = [];
-  for (const row of parsed) {
-    const item = asRecord4(row);
-    const owner = typeof item?.owner === "string" ? item.owner : "";
-    const name = typeof item?.name === "string" ? item.name : "";
-    if (!name) continue;
-    skills.push({ ...owner ? { owner } : {}, name, enabled: item?.enabled !== false });
-  }
-  return skills;
-}
-async function writeRemoteSkillsManifest(token, repoOwner, repoName, skills) {
-  const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${SKILLS_SYNC_MANIFEST_PATH}`;
-  let sha = "";
-  const nextContent = JSON.stringify(skills, null, 2);
-  const existing = await fetch(url, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "codex-web-local"
-    }
-  });
-  if (existing.ok) {
-    const payload = await existing.json();
-    sha = payload.sha ?? "";
-    const currentContent = payload.content ? Buffer.from(payload.content.replace(/\n/g, ""), "base64").toString("utf8") : "";
-    if (currentContent === nextContent) return false;
-  }
-  const content = Buffer.from(nextContent, "utf8").toString("base64");
-  await getGithubJson(url, token, "PUT", {
-    message: "Update synced skills manifest",
-    content,
-    ...sha ? { sha } : {}
-  });
-  return true;
-}
-function toGitHubTokenRemote(repoOwner, repoName, token) {
-  return `https://x-access-token:${encodeURIComponent(token)}@github.com/${repoOwner}/${repoName}.git`;
-}
-async function ensureSkillsWorkingTreeRepo(repoUrl, branch, options = {}) {
-  const localDir = options.localDir ?? getSkillsInstallDir();
-  await mkdir3(localDir, { recursive: true });
-  const gitDir = join4(localDir, ".git");
-  let hasGitDir = false;
-  try {
-    const gitDirStat = await lstat(gitDir);
-    hasGitDir = gitDirStat.isDirectory() || gitDirStat.isFile();
-  } catch {
-    hasGitDir = false;
-  }
-  if (!hasGitDir) {
-    await runCommand2("git", ["init"], { cwd: localDir });
-    await runCommand2("git", ["config", "user.email", "skills-sync@local"], { cwd: localDir });
-    await runCommand2("git", ["config", "user.name", "Skills Sync"], { cwd: localDir });
-    await runCommand2("git", ["add", "-A"], { cwd: localDir });
-    try {
-      await runCommand2("git", ["commit", "-m", "Local skills snapshot before sync"], { cwd: localDir });
-    } catch {
-    }
-    await runCommand2("git", ["branch", "-M", branch], { cwd: localDir });
-    try {
-      await runCommand2("git", ["remote", "add", "origin", repoUrl], { cwd: localDir });
-    } catch {
-      await runCommand2("git", ["remote", "set-url", "origin", repoUrl], { cwd: localDir });
-    }
-    await runGitFetchWithRefLockRetry(localDir);
-    if (options.overwriteLocalFiles) {
-      await runCommand2("git", ["reset", "--hard"], { cwd: localDir });
-      await runCommand2("git", ["clean", "-fd"], { cwd: localDir });
-      await runCommand2("git", ["checkout", "-B", branch, `origin/${branch}`], { cwd: localDir });
-      await runCommand2("git", ["reset", "--hard", `origin/${branch}`], { cwd: localDir });
-      await runCommand2("git", ["clean", "-fd"], { cwd: localDir });
-      return localDir;
-    }
-    try {
-      await runCommand2("git", ["merge", "--allow-unrelated-histories", "--no-edit", `origin/${branch}`], { cwd: localDir });
-    } catch {
-    }
-    return localDir;
-  }
-  await runCommand2("git", ["remote", "set-url", "origin", repoUrl], { cwd: localDir });
-  await runGitFetchWithRefLockRetry(localDir);
-  if (options.overwriteLocalFiles) {
-    try {
-      await runCommand2("git", ["reset", "--hard"], { cwd: localDir });
-    } catch {
-    }
-    await runCommand2("git", ["clean", "-fd"], { cwd: localDir });
-    await runCommand2("git", ["checkout", "-B", branch, `origin/${branch}`], { cwd: localDir });
-    await runCommand2("git", ["reset", "--hard", `origin/${branch}`], { cwd: localDir });
-    await runCommand2("git", ["clean", "-fd"], { cwd: localDir });
-    return localDir;
-  }
-  const hasLocalChangesBeforeSync = await hasLocalUncommittedChanges(localDir);
-  const localMtimesBeforeSync = hasLocalChangesBeforeSync ? await snapshotFileMtimes(localDir) : /* @__PURE__ */ new Map();
-  await resolveMergeConflictsByNewerCommit(localDir, branch, localMtimesBeforeSync);
-  try {
-    await runCommand2("git", ["checkout", branch], { cwd: localDir });
-  } catch {
-    await resolveMergeConflictsByNewerCommit(localDir, branch, localMtimesBeforeSync);
-    await runCommand2("git", ["checkout", "-B", branch], { cwd: localDir });
-  }
-  await resolveMergeConflictsByNewerCommit(localDir, branch, localMtimesBeforeSync);
-  const hasLocalChangesBeforePull = await hasLocalUncommittedChanges(localDir);
-  const localMtimesBeforePull = hasLocalChangesBeforePull ? await snapshotFileMtimes(localDir) : /* @__PURE__ */ new Map();
-  let createdAutostash = false;
-  try {
-    const stashOutput = await runCommandWithOutput("git", ["stash", "push", "--include-untracked", "-m", "codex-skills-autostash"], { cwd: localDir });
-    createdAutostash = !stashOutput.includes("No local changes to save");
-  } catch {
-  }
-  let pulledMtimes = /* @__PURE__ */ new Map();
-  await runGitFetchWithRefLockRetry(localDir, ["fetch", "origin", branch]);
-  await runCommand2("git", ["reset", "--hard", `origin/${branch}`], { cwd: localDir });
-  pulledMtimes = await snapshotFileMtimes(localDir);
-  if (createdAutostash) {
-    try {
-      await runCommand2("git", ["stash", "pop"], { cwd: localDir });
-    } catch {
-      await resolveStashPopConflictsByFileTime(localDir, localMtimesBeforePull, pulledMtimes);
-    }
-  }
-  return localDir;
-}
-async function resolveMergeConflictsByNewerCommit(repoDir, branch, localMtimesBeforeSync = /* @__PURE__ */ new Map()) {
-  for (let i = 0; i < 20; i++) {
-    const unmerged = (await runCommandWithOutput("git", ["diff", "--name-only", "--diff-filter=U"], { cwd: repoDir })).split(/\r?\n/).map((row) => row.trim()).filter(Boolean);
-    if (unmerged.length === 0) return;
-    for (const path of unmerged) {
-      const localMtimeMs = localMtimesBeforeSync.get(path) ?? 0;
-      const localMtimeSec = Math.floor(localMtimeMs / 1e3);
-      const remoteCommitTime = await getCommitTime(repoDir, `origin/${branch}`, path);
-      if (remoteCommitTime > localMtimeSec) {
-        await checkoutConflictSideWithFallback(repoDir, path, "--theirs");
-      } else {
-        await checkoutConflictSideWithFallback(repoDir, path, "--ours");
-      }
-      await runCommand2("git", ["add", "--", path], { cwd: repoDir });
-    }
-    const rebaseHead = await readOptionalGitRef(repoDir, "REBASE_HEAD");
-    if (rebaseHead) {
-      try {
-        await runCommand2("git", ["rebase", "--continue"], { cwd: repoDir });
-        continue;
-      } catch {
-        continue;
-      }
-    }
-    const mergeHead = await readOptionalGitRef(repoDir, "MERGE_HEAD");
-    if (mergeHead) {
-      await runCommand2("git", ["commit", "-m", "Auto-resolve skills merge by mtime policy"], { cwd: repoDir });
-      continue;
-    }
-  }
-  throw new Error("Auto-resolve exceeded retry limit while reconciling sync conflicts");
-}
-async function readOptionalGitRef(repoDir, ref) {
-  try {
-    return (await runCommandWithOutput("git", ["rev-parse", "-q", "--verify", ref], { cwd: repoDir })).trim();
-  } catch {
-    return "";
-  }
-}
-async function listUnmergedStages(repoDir, path) {
-  const raw = (await runCommandWithOutput("git", ["ls-files", "-u", "--", path], { cwd: repoDir })).trim();
-  const stages = /* @__PURE__ */ new Set();
-  if (!raw) return stages;
-  for (const line of raw.split(/\r?\n/)) {
-    const parts = line.trim().split(/\s+/);
-    const stage = Number.parseInt(parts[2] ?? "", 10);
-    if (Number.isInteger(stage)) stages.add(stage);
-  }
-  return stages;
-}
-async function checkoutConflictSideWithFallback(repoDir, path, preferredSide) {
-  const stages = await listUnmergedStages(repoDir, path);
-  const hasOurs = stages.has(2);
-  const hasTheirs = stages.has(3);
-  if (!hasOurs && !hasTheirs) return;
-  if (preferredSide === "--ours") {
-    if (hasOurs) {
-      await runCommand2("git", ["checkout", "--ours", "--", path], { cwd: repoDir });
-      return;
-    }
-    await runCommand2("git", ["checkout", "--theirs", "--", path], { cwd: repoDir });
-    return;
-  }
-  if (hasTheirs) {
-    await runCommand2("git", ["checkout", "--theirs", "--", path], { cwd: repoDir });
-    return;
-  }
-  await runCommand2("git", ["checkout", "--ours", "--", path], { cwd: repoDir });
-}
-async function getCommitTime(repoDir, ref, path) {
-  try {
-    const output = (await runCommandWithOutput("git", ["log", "-1", "--format=%ct", ref, "--", path], { cwd: repoDir })).trim();
-    return output ? Number.parseInt(output, 10) : 0;
-  } catch {
-    return 0;
-  }
-}
-async function resolveStashPopConflictsByFileTime(repoDir, localMtimesBeforePull, pulledMtimes) {
-  const unmerged = (await runCommandWithOutput("git", ["diff", "--name-only", "--diff-filter=U"], { cwd: repoDir })).split(/\r?\n/).map((row) => row.trim()).filter(Boolean);
-  if (unmerged.length === 0) return;
-  for (const path of unmerged) {
-    const localMtime = localMtimesBeforePull.get(path) ?? 0;
-    const pulledMtime = pulledMtimes.get(path) ?? 0;
-    const side = localMtime >= pulledMtime ? "--theirs" : "--ours";
-    await checkoutConflictSideWithFallback(repoDir, path, side);
-    await runCommand2("git", ["add", "--", path], { cwd: repoDir });
-  }
-  const mergeHead = await readOptionalGitRef(repoDir, "MERGE_HEAD");
-  if (mergeHead) {
-    await runCommand2("git", ["commit", "-m", "Auto-resolve stash-pop conflicts by file time"], { cwd: repoDir });
-  }
-}
-async function snapshotFileMtimes(dir) {
-  const mtimes = /* @__PURE__ */ new Map();
-  await walkFileMtimes(dir, dir, mtimes);
-  return mtimes;
-}
-async function hasLocalUncommittedChanges(repoDir) {
-  const status = (await runCommandWithOutput("git", ["status", "--porcelain"], { cwd: repoDir })).trim();
-  return status.length > 0;
-}
-async function hasCommittableWorkingTreeChanges(repoDir) {
-  try {
-    await runCommand2("git", ["diff", "--quiet", "--exit-code", "--ignore-submodules=dirty"], { cwd: repoDir });
-    await runCommand2("git", ["diff", "--cached", "--quiet", "--exit-code", "--ignore-submodules=dirty"], { cwd: repoDir });
-  } catch {
-    return true;
-  }
-  const untracked = (await runCommandWithOutput("git", ["ls-files", "--others", "--exclude-standard"], { cwd: repoDir })).trim();
-  return untracked.length > 0;
-}
-async function walkFileMtimes(rootDir, currentDir, out) {
-  let entries;
-  try {
-    entries = await readdir2(currentDir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const entryName = String(entry.name);
-    if (entryName === ".git") continue;
-    const absolutePath = join4(currentDir, entryName);
-    const relativePath = absolutePath.slice(rootDir.length + 1);
-    if (entry.isDirectory()) {
-      await walkFileMtimes(rootDir, absolutePath, out);
-      continue;
-    }
-    if (!entry.isFile()) continue;
-    try {
-      const info = await stat3(absolutePath);
-      out.set(relativePath, info.mtimeMs);
-    } catch {
-    }
-  }
-}
-async function syncInstalledSkillsFolderToRepo(token, repoOwner, repoName, _installedMap) {
-  async function hasTrackedLocalFileChanges(repoDir2, filePath) {
-    const diffHead = (await runCommandWithOutput("git", ["diff", "--name-only", "HEAD", "--", filePath], { cwd: repoDir2 })).trim();
-    if (diffHead.length > 0) return true;
-    const diffCached = (await runCommandWithOutput("git", ["diff", "--cached", "--name-only", "--", filePath], { cwd: repoDir2 })).trim();
-    return diffCached.length > 0;
-  }
-  async function restoreProtectedFilesFromOrigin(repoDir2, branch2) {
-    const protectedFiles = ["AGENTS.md"];
-    for (const filePath of protectedFiles) {
-      const hasLocalEdits = await hasTrackedLocalFileChanges(repoDir2, filePath);
-      if (hasLocalEdits) continue;
-      try {
-        await runCommand2("git", ["cat-file", "-e", `origin/${branch2}:${filePath}`], { cwd: repoDir2 });
-      } catch {
-        continue;
-      }
-      await runCommand2("git", ["checkout", `origin/${branch2}`, "--", filePath], { cwd: repoDir2 });
-    }
-    try {
-      await runCommand2("git", ["cat-file", "-e", `origin/${branch2}:shared_skills`], { cwd: repoDir2 });
-      await runCommand2("git", ["checkout", `origin/${branch2}`, "--", "shared_skills"], { cwd: repoDir2 });
-    } catch {
-    }
-  }
-  function isNonFastForwardPushError(error) {
-    const text = getErrorMessage4(error, "").toLowerCase();
-    return text.includes("non-fast-forward") || text.includes("fetch first") || text.includes("rejected") && text.includes("push");
-  }
-  async function pushWithNonFastForwardRetry(repoDir2, branch2) {
-    const maxAttempts = 3;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const hasLocalChangesBeforeReconcile = await hasLocalUncommittedChanges(repoDir2);
-      const localMtimesBeforeReconcile = hasLocalChangesBeforeReconcile ? await snapshotFileMtimes(repoDir2) : /* @__PURE__ */ new Map();
-      await runGitFetchWithRefLockRetry(repoDir2);
-      try {
-        await runCommand2("git", ["rebase", `origin/${branch2}`], { cwd: repoDir2 });
-      } catch {
-        try {
-          await runCommand2("git", ["rebase", "--abort"], { cwd: repoDir2 });
-        } catch {
-        }
-        try {
-          await runCommand2("git", ["pull", "--rebase", "--autostash", "origin", branch2], { cwd: repoDir2 });
-        } catch {
-          await resolveMergeConflictsByNewerCommit(repoDir2, branch2, localMtimesBeforeReconcile);
-          await runCommand2("git", ["pull", "--rebase", "--autostash", "origin", branch2], { cwd: repoDir2 });
-        }
-      }
-      try {
-        await runCommand2("git", ["push", "--no-recurse-submodules", "origin", `HEAD:${branch2}`], { cwd: repoDir2 });
-        const state = await readSkillsSyncState();
-        const pushedHead = await runCommandWithOutput("git", ["rev-parse", "HEAD"], { cwd: repoDir2 });
-        await writeSkillsSyncState({
-          ...state,
-          lastPushCommitSha: pushedHead.trim(),
-          lastSyncAttemptCount: attempt,
-          lastSyncError: "",
-          lastSyncAtIso: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        return;
-      } catch (error) {
-        if (!isNonFastForwardPushError(error) || attempt >= maxAttempts) {
-          const state = await readSkillsSyncState();
-          await writeSkillsSyncState({
-            ...state,
-            lastSyncAttemptCount: attempt,
-            lastSyncError: getErrorMessage4(error, "push failed"),
-            lastSyncAtIso: (/* @__PURE__ */ new Date()).toISOString()
-          });
-          throw error;
-        }
-      }
-    }
-    throw new Error("Failed to push after non-fast-forward retries");
-  }
-  const remoteUrl = toGitHubTokenRemote(repoOwner, repoName, token);
-  const branch = PRIVATE_SYNC_BRANCH;
-  const repoDir = await ensureSkillsWorkingTreeRepo(remoteUrl, branch);
-  void _installedMap;
-  await runCommand2("git", ["config", "user.email", "skills-sync@local"], { cwd: repoDir });
-  await runCommand2("git", ["config", "user.name", "Skills Sync"], { cwd: repoDir });
-  await restoreProtectedFilesFromOrigin(repoDir, branch);
-  await runCommand2("git", ["add", "."], { cwd: repoDir });
-  try {
-    await runCommand2("git", ["diff", "--cached", "--quiet", "--exit-code"], { cwd: repoDir });
-    return;
-  } catch {
-  }
-  await runCommand2("git", ["commit", "-m", "Sync installed skills folder and manifest"], { cwd: repoDir });
-  await pushWithNonFastForwardRetry(repoDir, branch);
-}
-async function pullInstalledSkillsFolderFromRepo(token, repoOwner, repoName) {
-  const remoteUrl = toGitHubTokenRemote(repoOwner, repoName, token);
-  const isUpstream = isUpstreamSkillsRepo(repoOwner, repoName);
-  const branch = isUpstream ? PUBLIC_UPSTREAM_BRANCH_ANDROID : PRIVATE_SYNC_BRANCH;
-  return await ensureSkillsWorkingTreeRepo(remoteUrl, branch, {
-    ...isUpstream ? { localDir: getSharedSkillsInstallDir() } : {},
-    overwriteLocalFiles: isUpstream
-  });
-}
-async function bootstrapSkillsFromUpstreamIntoLocal() {
-  const repoUrl = `https://github.com/${SYNC_UPSTREAM_SKILLS_OWNER}/${SYNC_UPSTREAM_SKILLS_REPO}.git`;
-  return await ensureSkillsWorkingTreeRepo(repoUrl, PUBLIC_UPSTREAM_BRANCH_ANDROID, {
-    localDir: getSharedSkillsInstallDir(),
-    overwriteLocalFiles: true
-  });
-}
-async function collectLocalSyncedSkills(appServer) {
-  const state = await readSkillsSyncState();
-  const owners = { ...state.installedOwners ?? {} };
-  const skills = await appServer.rpc("skills/list", {});
-  const seen = /* @__PURE__ */ new Set();
-  const synced = [];
-  let ownersChanged = false;
-  for (const entry of skills.data ?? []) {
-    for (const skill of groupRpcSkillRecords(entry.skills ?? [])) {
-      const name = typeof skill.name === "string" ? skill.name : "";
-      if (!name || skill.scope !== "user" || seen.has(name)) continue;
-      seen.add(name);
-      const owner = owners[name] ?? "";
-      synced.push({ ...owner ? { owner } : {}, name, enabled: skill.enabled !== false });
-    }
-  }
-  if (ownersChanged) {
-    await writeSkillsSyncState({ ...state, installedOwners: owners });
-  }
-  synced.sort((a, b) => `${a.owner ?? ""}/${a.name}`.localeCompare(`${b.owner ?? ""}/${b.name}`));
-  return synced;
-}
-async function autoPushSyncedSkills(appServer) {
-  const state = await readSkillsSyncState();
-  if (!state.githubToken || !state.repoOwner || !state.repoName) return;
-  if (isUpstreamSkillsRepo(state.repoOwner, state.repoName)) {
-    throw new Error("Refusing to push to upstream skills repository");
-  }
-  const repoDir = getSkillsInstallDir();
-  await runCommand2("git", ["fetch", "origin", PRIVATE_SYNC_BRANCH], { cwd: repoDir });
-  const head = (await runCommandWithOutput("git", ["rev-parse", "HEAD"], { cwd: repoDir })).trim();
-  const originHead = (await runCommandWithOutput("git", ["rev-parse", `origin/${PRIVATE_SYNC_BRANCH}`], { cwd: repoDir })).trim();
-  const hasCommittableChanges = await hasCommittableWorkingTreeChanges(repoDir);
-  if (!hasCommittableChanges && head === originHead) return;
-  const local = await collectLocalSyncedSkills(appServer);
-  const installedMap = await scanInstalledSkillsFromDisk();
-  await writeRemoteSkillsManifest(state.githubToken, state.repoOwner, state.repoName, local);
-  await syncInstalledSkillsFolderToRepo(state.githubToken, state.repoOwner, state.repoName, installedMap);
-}
-async function ensureCodexAgentsSymlinkToSkillsAgents() {
-  const codexHomeDir = getCodexHomeDir2();
-  const skillsAgentsPath = join4(codexHomeDir, "skills", "AGENTS.md");
-  const codexAgentsPath = join4(codexHomeDir, "AGENTS.md");
-  await mkdir3(join4(codexHomeDir, "skills"), { recursive: true });
-  let copiedFromCodex = false;
-  try {
-    const codexAgentsStat = await lstat(codexAgentsPath);
-    if (codexAgentsStat.isFile() || codexAgentsStat.isSymbolicLink()) {
-      const content = await readFile2(codexAgentsPath, "utf8");
-      await writeFile3(skillsAgentsPath, content, "utf8");
-      copiedFromCodex = true;
-    } else {
-      await rm3(codexAgentsPath, { force: true, recursive: true });
-    }
-  } catch {
-  }
-  if (!copiedFromCodex) {
-    try {
-      const skillsAgentsStat = await stat3(skillsAgentsPath);
-      if (!skillsAgentsStat.isFile()) {
-        await rm3(skillsAgentsPath, { force: true, recursive: true });
-        await writeFile3(skillsAgentsPath, "", "utf8");
-      }
-    } catch {
-      await writeFile3(skillsAgentsPath, "", "utf8");
-    }
-  }
-  const relativeTarget = join4("skills", "AGENTS.md");
-  try {
-    const current = await lstat(codexAgentsPath);
-    if (current.isSymbolicLink()) {
-      const existingTarget = await readlink(codexAgentsPath);
-      if (existingTarget === relativeTarget) return;
-    }
-    await rm3(codexAgentsPath, { force: true, recursive: true });
-  } catch {
-  }
-  await symlink(relativeTarget, codexAgentsPath);
-}
-async function runSkillsSyncStartup(appServer) {
-  if (startupSyncStatus.inProgress) return;
-  startupSyncStatus.inProgress = true;
-  startupSyncStatus.lastRunAtIso = (/* @__PURE__ */ new Date()).toISOString();
-  startupSyncStatus.lastError = "";
-  startupSyncStatus.branch = PRIVATE_SYNC_BRANCH;
-  try {
-    const state = await readSkillsSyncState();
-    if (!state.githubToken) {
-      await ensureCodexAgentsSymlinkToSkillsAgents();
-      if (!isAndroidLikeRuntime()) {
-        startupSyncStatus.mode = "idle";
-        startupSyncStatus.lastAction = "skip-upstream-non-android";
-        startupSyncStatus.lastSuccessAtIso = (/* @__PURE__ */ new Date()).toISOString();
-        return;
-      }
-      startupSyncStatus.mode = "unauthenticated-bootstrap";
-      startupSyncStatus.branch = getPreferredPublicUpstreamBranch();
-      startupSyncStatus.lastAction = "pull-upstream";
-      await bootstrapSkillsFromUpstreamIntoLocal();
-      try {
-        await appServer.rpc("skills/list", { forceReload: true });
-      } catch {
-      }
-      startupSyncStatus.lastSuccessAtIso = (/* @__PURE__ */ new Date()).toISOString();
-      startupSyncStatus.lastAction = "pull-upstream-complete";
-      return;
-    }
-    startupSyncStatus.mode = "authenticated-fork-sync";
-    startupSyncStatus.branch = PRIVATE_SYNC_BRANCH;
-    startupSyncStatus.lastAction = "ensure-private-fork";
-    const username = state.githubUsername || await resolveGithubUsername(state.githubToken);
-    const repoName = DEFAULT_SKILLS_SYNC_REPO_NAME;
-    await ensurePrivateForkFromUpstream(state.githubToken, username, repoName);
-    await writeSkillsSyncState({ ...state, githubUsername: username, repoOwner: username, repoName });
-    startupSyncStatus.lastAction = "pull-private-fork";
-    await pullInstalledSkillsFolderFromRepo(state.githubToken, username, repoName);
-    try {
-      await appServer.rpc("skills/list", { forceReload: true });
-    } catch {
-    }
-    startupSyncStatus.lastAction = "push-private-fork";
-    await autoPushSyncedSkills(appServer);
-    startupSyncStatus.lastSuccessAtIso = (/* @__PURE__ */ new Date()).toISOString();
-    startupSyncStatus.lastAction = "startup-sync-complete";
-  } catch (error) {
-    startupSyncStatus.lastError = getErrorMessage4(error, "startup-sync-failed");
-    startupSyncStatus.lastAction = "startup-sync-failed";
-  } finally {
-    startupSyncStatus.inProgress = false;
-  }
-}
-async function initializeSkillsSyncOnStartup(appServer) {
-  if (startupSkillsSyncInitialized) return;
-  startupSkillsSyncInitialized = true;
-  await runSkillsSyncStartup(appServer);
-}
-async function finalizeGithubLoginAndSync(token, username, appServer) {
-  const repoName = DEFAULT_SKILLS_SYNC_REPO_NAME;
-  await ensurePrivateForkFromUpstream(token, username, repoName);
-  const current = await readSkillsSyncState();
-  await writeSkillsSyncState({ ...current, githubToken: token, githubUsername: username, repoOwner: username, repoName });
-  await pullInstalledSkillsFolderFromRepo(token, username, repoName);
-  try {
-    await appServer.rpc("skills/list", { forceReload: true });
-  } catch {
-  }
-  await autoPushSyncedSkills(appServer);
+  const description = extractSkillFrontmatterField(markdown, "description");
+  if (description) return description;
+  return markdown.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !line.startsWith("#") && !line.startsWith("---")) ?? "";
 }
 async function handleSkillsRoutes(req, res, url, context) {
   const { appServer, readJsonBody: readJsonBody3 } = context;
@@ -3745,207 +2981,6 @@ async function handleSkillsRoutes(req, res, url, context) {
       setJson3(res, 200, { results });
     } catch (error) {
       setJson3(res, 502, { error: getErrorMessage4(error, "Failed to search skills") });
-    }
-    return true;
-  }
-  if (req.method === "GET" && url.pathname === "/codex-api/skills-sync/status") {
-    const state = await readSkillsSyncState();
-    setJson3(res, 200, {
-      data: {
-        loggedIn: Boolean(state.githubToken),
-        githubUsername: state.githubUsername ?? "",
-        repoOwner: state.repoOwner ?? "",
-        repoName: state.repoName ?? "",
-        configured: Boolean(state.githubToken && state.repoOwner && state.repoName),
-        telemetry: {
-          lastPullCommitSha: state.lastPullCommitSha ?? "",
-          lastPushCommitSha: state.lastPushCommitSha ?? "",
-          lastSyncAttemptCount: state.lastSyncAttemptCount ?? 0,
-          lastSyncError: state.lastSyncError ?? "",
-          lastSyncAtIso: state.lastSyncAtIso ?? ""
-        },
-        startup: {
-          inProgress: startupSyncStatus.inProgress,
-          mode: startupSyncStatus.mode,
-          branch: startupSyncStatus.branch,
-          lastAction: startupSyncStatus.lastAction,
-          lastRunAtIso: startupSyncStatus.lastRunAtIso,
-          lastSuccessAtIso: startupSyncStatus.lastSuccessAtIso,
-          lastError: startupSyncStatus.lastError
-        }
-      }
-    });
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/github/start-login") {
-    try {
-      const started = await startGithubDeviceLogin();
-      setJson3(res, 200, { data: started });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to start GitHub login") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/github/token-login") {
-    try {
-      const payload = asRecord4(await readJsonBody3(req));
-      const token = typeof payload?.token === "string" ? payload.token.trim() : "";
-      if (!token) {
-        setJson3(res, 400, { error: "Missing GitHub token" });
-        return true;
-      }
-      const username = await resolveGithubUsername(token);
-      await finalizeGithubLoginAndSync(token, username, appServer);
-      setJson3(res, 200, { ok: true, data: { githubUsername: username } });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to login with GitHub token") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/github/logout") {
-    try {
-      const state = await readSkillsSyncState();
-      await writeSkillsSyncState({
-        ...state,
-        githubToken: void 0,
-        githubUsername: void 0,
-        repoOwner: void 0,
-        repoName: void 0
-      });
-      setJson3(res, 200, { ok: true });
-    } catch (error) {
-      setJson3(res, 500, { error: getErrorMessage4(error, "Failed to logout GitHub") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/github/complete-login") {
-    try {
-      const payload = asRecord4(await readJsonBody3(req));
-      const deviceCode = typeof payload?.deviceCode === "string" ? payload.deviceCode : "";
-      if (!deviceCode) {
-        setJson3(res, 400, { error: "Missing deviceCode" });
-        return true;
-      }
-      const result = await completeGithubDeviceLogin(deviceCode);
-      if (!result.token) {
-        setJson3(res, 200, { ok: false, pending: result.error === "authorization_pending", error: result.error || "login_failed" });
-        return true;
-      }
-      const token = result.token;
-      const username = await resolveGithubUsername(token);
-      await finalizeGithubLoginAndSync(token, username, appServer);
-      setJson3(res, 200, { ok: true, data: { githubUsername: username } });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to complete GitHub login") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/push") {
-    try {
-      const state = await readSkillsSyncState();
-      if (!state.githubToken || !state.repoOwner || !state.repoName) {
-        setJson3(res, 400, { error: "Skills sync is not configured yet" });
-        return true;
-      }
-      if (isUpstreamSkillsRepo(state.repoOwner, state.repoName)) {
-        setJson3(res, 400, { error: "Refusing to push to upstream repository" });
-        return true;
-      }
-      const local = await collectLocalSyncedSkills(appServer);
-      const installedMap = await collectInstalledSkillsMap(appServer);
-      await writeRemoteSkillsManifest(state.githubToken, state.repoOwner, state.repoName, local);
-      await syncInstalledSkillsFolderToRepo(state.githubToken, state.repoOwner, state.repoName, installedMap);
-      setJson3(res, 200, { ok: true, data: { synced: local.length } });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to push synced skills") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/startup-sync") {
-    try {
-      await runSkillsSyncStartup(appServer);
-      setJson3(res, 200, { ok: true });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to run startup sync") });
-    }
-    return true;
-  }
-  if (req.method === "POST" && url.pathname === "/codex-api/skills-sync/pull") {
-    try {
-      const state = await readSkillsSyncState();
-      if (!state.githubToken || !state.repoOwner || !state.repoName) {
-        const repoDir = await bootstrapSkillsFromUpstreamIntoLocal();
-        const localSkills2 = await scanInstalledSkillsFromDir(repoDir);
-        try {
-          await appServer.rpc("skills/list", { forceReload: true });
-        } catch {
-        }
-        setJson3(res, 200, { ok: true, data: { synced: localSkills2.size, source: "upstream" } });
-        return true;
-      }
-      if (isUpstreamSkillsRepo(state.repoOwner, state.repoName)) {
-        const repoDir = await pullInstalledSkillsFolderFromRepo(state.githubToken, state.repoOwner, state.repoName);
-        const localSkills2 = await scanInstalledSkillsFromDir(repoDir);
-        const pulledHead2 = await runCommandWithOutput("git", ["rev-parse", "HEAD"], { cwd: repoDir }).catch(() => "");
-        await writeSkillsSyncState({
-          ...state,
-          lastPullCommitSha: pulledHead2.trim(),
-          lastSyncAttemptCount: 1,
-          lastSyncError: "",
-          lastSyncAtIso: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        try {
-          await appServer.rpc("skills/list", { forceReload: true });
-        } catch {
-        }
-        setJson3(res, 200, { ok: true, data: { synced: localSkills2.size, source: "upstream" } });
-        return true;
-      }
-      const remote = await readRemoteSkillsManifest(state.githubToken, state.repoOwner, state.repoName);
-      const localDir = await detectUserSkillsDir(appServer);
-      await pullInstalledSkillsFolderFromRepo(state.githubToken, state.repoOwner, state.repoName);
-      const localSkills = await scanInstalledSkillsFromDisk();
-      const missingAfterPull = [];
-      for (const skill of remote) {
-        const owner = skill.owner || "";
-        if (!owner) continue;
-        if (!localSkills.has(skill.name)) {
-          missingAfterPull.push(`${owner}/${skill.name}`);
-          continue;
-        }
-        const skillPath = join4(localDir, skill.name);
-        await appServer.rpc("skills/config/write", { path: skillPath, enabled: skill.enabled });
-      }
-      if (missingAfterPull.length > 0) {
-        throw new Error(`Missing skill folders after pull: ${missingAfterPull.join(", ")}`);
-      }
-      const remoteNames = new Set(remote.map((row) => row.name));
-      for (const [name, localInfo] of localSkills.entries()) {
-        if (!remoteNames.has(name)) {
-          await rm3(localInfo.path.replace(/\/SKILL\.md$/, ""), { recursive: true, force: true });
-        }
-      }
-      const nextOwners = {};
-      for (const item of remote) {
-        const owner = item.owner || "";
-        if (owner) nextOwners[item.name] = owner;
-      }
-      const pulledHead = await runCommandWithOutput("git", ["rev-parse", "HEAD"], { cwd: getSkillsInstallDir() }).catch(() => "");
-      await writeSkillsSyncState({
-        ...state,
-        installedOwners: nextOwners,
-        lastPullCommitSha: pulledHead.trim(),
-        lastSyncAttemptCount: 1,
-        lastSyncError: "",
-        lastSyncAtIso: (/* @__PURE__ */ new Date()).toISOString()
-      });
-      try {
-        await appServer.rpc("skills/list", { forceReload: true });
-      } catch {
-      }
-      setJson3(res, 200, { ok: true, data: { synced: remote.length } });
-    } catch (error) {
-      setJson3(res, 502, { error: getErrorMessage4(error, "Failed to pull synced skills") });
     }
     return true;
   }
@@ -3998,8 +3033,6 @@ async function handleSkillsRoutes(req, res, url, context) {
         throw new Error(`Skill install completed but ${installSource} was not found in local installed skills`);
       }
       await ensureInstalledSkillIsValid(appServer, installed.path);
-      autoPushSyncedSkills(appServer).catch(() => {
-      });
       setJson3(res, 200, { ok: true, path: installed.path });
     } catch (error) {
       setJson3(res, 502, { error: getErrorMessage4(error, "Failed to install skill") });
@@ -4018,14 +3051,6 @@ async function handleSkillsRoutes(req, res, url, context) {
         return true;
       }
       await rm3(target, { recursive: true, force: true });
-      if (name) {
-        const syncState = await readSkillsSyncState();
-        const nextOwners = { ...syncState.installedOwners ?? {} };
-        delete nextOwners[name];
-        await writeSkillsSyncState({ ...syncState, installedOwners: nextOwners });
-      }
-      autoPushSyncedSkills(appServer).catch(() => {
-      });
       try {
         await withTimeout(appServer.rpc("skills/list", { forceReload: true }), 1e4, "skills/list reload");
       } catch {
@@ -4791,7 +3816,7 @@ var OPENCODE_ZEN_PROVIDER_ID = "opencode-zen";
 var CUSTOM_RUNTIME_PROVIDER_ID = "custom_endpoint";
 var OPENCODE_ZEN_RUNTIME_PROVIDER_ID = "opencode_zen";
 var OPENCODE_ZEN_BASE_URL = "https://opencode.ai/zen/v1";
-var OPENCODE_ZEN_DEFAULT_MODEL = "big-pickle";
+var OPENCODE_ZEN_DEFAULT_MODEL = "muse-spark-1.3-contributor-free";
 function createDefaultOpenCodeZenFreeModeState() {
   return {
     enabled: true,
@@ -5417,25 +4442,44 @@ import { randomBytes } from "crypto";
 var ZEN_RESPONSES_ENDPOINT = "https://opencode.ai/zen/v1/responses";
 var ZEN_CHAT_COMPLETIONS_ENDPOINT = "https://opencode.ai/zen/v1/chat/completions";
 var OPENCODE_ZEN_PUBLIC_TOKEN = "public";
-var OPENCODE_ZEN_USER_AGENT = `opencode/1.15.9 ai-sdk/provider-utils/4.0.23 runtime/node/${process.versions.node}`;
+var OPENCODE_ZEN_USER_AGENT = "opencode/1.18.30 ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14";
 var OPENCODE_ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 function createOpenCodeId(prefix) {
-  const bytes = randomBytes(24);
-  let suffix = "";
-  for (const byte of bytes) {
-    suffix += OPENCODE_ID_ALPHABET[byte % OPENCODE_ID_ALPHABET.length];
-  }
-  return `${prefix}_${suffix}`;
+  const hex = randomBytes(6).toString("hex");
+  const suffix = Array.from(randomBytes(14), (byte) => OPENCODE_ID_ALPHABET[byte % OPENCODE_ID_ALPHABET.length]).join("");
+  return `${prefix}_${hex}${suffix}`;
 }
 function createZenUpstreamHeaders(bearerToken) {
   return {
     "Authorization": `Bearer ${bearerToken || OPENCODE_ZEN_PUBLIC_TOKEN}`,
     "User-Agent": OPENCODE_ZEN_USER_AGENT,
-    "Accept": "*/*",
+    "Accept": "text/event-stream",
     "X-Opencode-Client": "cli",
     "X-Opencode-Project": "global",
     "X-Opencode-Request": createOpenCodeId("msg"),
     "X-Opencode-Session": createOpenCodeId("ses")
+  };
+}
+function createRequiredZenTool(name) {
+  return {
+    type: "function",
+    name,
+    description: `OpenCode built-in ${name} tool`,
+    parameters: { type: "object", properties: {}, required: [], additionalProperties: false }
+  };
+}
+function normalizeZenResponsesRequest(payload) {
+  const tools = Array.isArray(payload.tools) ? payload.tools.filter((tool) => Boolean(tool) && typeof tool === "object") : [];
+  const toolNames = new Set(tools.map((tool) => typeof tool.name === "string" ? tool.name : ""));
+  for (const name of ["bash", "read"]) {
+    if (!toolNames.has(name)) tools.push(createRequiredZenTool(name));
+  }
+  return {
+    ...payload,
+    store: false,
+    stream: true,
+    tools,
+    tool_choice: "auto"
   };
 }
 function handleZenProxyRequest(req, res, bearerToken, wireApi) {
@@ -5447,7 +4491,8 @@ function handleZenProxyRequest(req, res, bearerToken, wireApi) {
     missingKeyMessage: "Missing OpenCode Zen API key",
     requireBearerToken: false,
     allowToolFallbackToResponses: false,
-    responsesPayloadFormat: "chat",
+    responsesPayloadFormat: "raw",
+    sanitizeResponsesRequest: normalizeZenResponsesRequest,
     upstreamHeaders: () => createZenUpstreamHeaders(bearerToken)
   });
 }
@@ -5468,7 +4513,7 @@ function handleCustomEndpointProxyRequest(req, res, options) {
 }
 
 // src/server/terminalManager.ts
-import { chmodSync, existsSync as existsSync3, lstatSync, readFileSync, realpathSync, rmSync, writeFileSync } from "fs";
+import { chmodSync, existsSync as existsSync2, lstatSync, readFileSync, realpathSync, rmSync, writeFileSync } from "fs";
 import { randomUUID } from "crypto";
 import { createRequire } from "module";
 import { basename as basename3, dirname, join as join5 } from "path";
@@ -5487,7 +4532,7 @@ var ThreadTerminalManager = class {
     const terminalSpawn = loadOptionalTerminalSpawn(options.spawn);
     this.spawn = terminalSpawn.spawn;
     this.unavailableReason = terminalSpawn.reason;
-    this.exists = options.exists ?? existsSync3;
+    this.exists = options.exists ?? existsSync2;
     this.homeDir = options.homeDir ?? homedir4;
     this.cwd = options.cwd ?? process.cwd;
     this.platform = options.platform ?? process.platform;
@@ -5764,7 +4809,7 @@ function repairNativePtyBuild(packageName) {
     const buildDir = join5(packageRoot, "build");
     const makefile = join5(buildDir, "Makefile");
     const binary = join5(buildDir, "Release", "pty.node");
-    if (!existsSync3(makefile)) return;
+    if (!existsSync2(makefile)) return;
     if (!isBrokenSymlink(binary)) return;
     const source = readFileSync(makefile, "utf8");
     const patched = source.replace(
@@ -5783,7 +4828,7 @@ function isBrokenSymlink(path) {
   try {
     if (!lstatSync(path).isSymbolicLink()) return false;
     try {
-      return !existsSync3(realpathSync(path));
+      return !existsSync2(realpathSync(path));
     } catch {
       return true;
     }
@@ -5796,14 +4841,14 @@ function resolveNodePtyPrebuiltPath() {
     const packageJson = require2.resolve("node-pty-prebuilt-multiarch/package.json");
     const packageRoot = dirname(packageJson);
     const builtPath = join5(packageRoot, "build", "Release", "pty.node");
-    if (existsSync3(builtPath)) {
+    if (existsSync2(builtPath)) {
       return builtPath;
     }
     const runtime = Object.prototype.hasOwnProperty.call(process.versions, "electron") ? "electron" : "node";
-    const libc = process.platform === "linux" && existsSync3("/etc/alpine-release") ? ".musl" : "";
+    const libc = process.platform === "linux" && existsSync2("/etc/alpine-release") ? ".musl" : "";
     const binaryName = `${runtime}.abi${process.versions.modules}${libc}.node`;
     const binaryPath = join5(packageRoot, "prebuilds", `${process.platform}-${process.arch}`, binaryName);
-    return existsSync3(binaryPath) ? binaryPath : null;
+    return existsSync2(binaryPath) ? binaryPath : null;
   } catch {
     return null;
   }
@@ -5817,7 +4862,7 @@ function ensurePackageSpawnHelperExecutable(packageName) {
   try {
     const packageRoot = dirname(require2.resolve(`${packageName}/package.json`));
     const helperPath = join5(packageRoot, "prebuilds", `${process.platform}-${process.arch}`, "spawn-helper");
-    if (existsSync3(helperPath)) {
+    if (existsSync2(helperPath)) {
       chmodSync(helperPath, 493);
     }
   } catch {
@@ -5857,7 +4902,6 @@ function isAbsoluteLikePath(value) {
 }
 
 // src/server/codexAppServerBridge.ts
-var COMPOSIO_CONNECTORS_PAGE_LIMIT_MAX = 1e3;
 var PROVIDER_MODELS_FETCH_TIMEOUT_MS = 5e3;
 var THREAD_RESPONSE_TURN_LIMIT = 10;
 var THREAD_TURN_PAGE_READ_CACHE_TTL_MS = 3e4;
@@ -5873,7 +4917,6 @@ var API_PERF_BODY_MB_THRESHOLD_ENV_KEY = "CODEXUI_API_PERF_BODY_MB_THRESHOLD";
 var DEFAULT_API_PERF_MS_THRESHOLD = 300;
 var DEFAULT_API_PERF_BODY_MB_THRESHOLD = 1;
 var MB_DIVISOR = 1024 * 1024;
-var COMPOSIO_USER_DATA_PATH = join6(homedir5(), ".composio", "user_data.json");
 var SESSION_SKILL_INPUT_CACHE_LIMIT = 64;
 var sessionSkillInputCache = /* @__PURE__ */ new Map();
 function parseSessionSkillText(value) {
@@ -6164,14 +5207,14 @@ async function persistInlineDataUrlToLocalFile(dataUrl, baseName) {
   if (bytes.length === 0) return null;
   const hash = createHash2("sha1").update(bytes).digest("hex");
   const ext = extensionFromMimeType(mimeType);
-  const mediaDir = join6(tmpdir4(), "codex-web-inline-media");
-  await mkdir4(mediaDir, { recursive: true });
+  const mediaDir = join6(tmpdir3(), "codex-web-inline-media");
+  await mkdir3(mediaDir, { recursive: true });
   const fileName = `${baseName}-${hash}${ext}`;
   const filePath = join6(mediaDir, fileName);
   try {
     await stat4(filePath);
   } catch {
-    await writeFile4(filePath, bytes);
+    await writeFile3(filePath, bytes);
   }
   return filePath;
 }
@@ -6680,7 +5723,7 @@ async function* walkProjectZipEntries(root, ignoreMatcher, current = root) {
     if (PROJECT_ZIP_SKIPPED_NAMES.has(entry.name)) continue;
     const absolutePath = join6(current, entry.name);
     if (ignoreMatcher.isIgnored(absolutePath)) continue;
-    const info = await lstat2(absolutePath);
+    const info = await lstat(absolutePath);
     if (info.isSymbolicLink()) continue;
     if (info.isDirectory()) {
       yield { path: absolutePath, isDirectory: true, mtime: info.mtime };
@@ -7048,7 +6091,7 @@ function registerImportedSessionsInStateDb(sessions) {
 }
 function listImportedThreadsFromStateDb() {
   const stateDbPath = join6(getCodexHomeDir3(), "state_5.sqlite");
-  if (!existsSync4(stateDbPath)) return [];
+  if (!existsSync3(stateDbPath)) return [];
   const sql = `
 SELECT id, rollout_path, created_at, updated_at, source, model_provider, cwd, title,
        cli_version, first_user_message, archived
@@ -7093,7 +6136,7 @@ LIMIT 200;
 }
 function readStateDbThreadExportMetadata() {
   const stateDbPath = join6(getCodexHomeDir3(), "state_5.sqlite");
-  if (!existsSync4(stateDbPath)) return /* @__PURE__ */ new Map();
+  if (!existsSync3(stateDbPath)) return /* @__PURE__ */ new Map();
   const columnsResult = spawnSync4("sqlite3", [stateDbPath, "PRAGMA table_info(threads);"], { encoding: "utf8" });
   if (columnsResult.status !== 0) return /* @__PURE__ */ new Map();
   const availableColumns = new Set(columnsResult.stdout.split(/\r?\n/u).map((line) => line.split("|")[1]).filter((value) => Boolean(value)));
@@ -7317,10 +6360,10 @@ async function importProjectZip(buffer, destinationParent) {
   }
   const parent = await realpath(destinationParent);
   let projectPath = join6(parent, projectName);
-  for (let index = 2; existsSync4(projectPath); index += 1) {
+  for (let index = 2; existsSync3(projectPath); index += 1) {
     projectPath = join6(parent, `${projectName}-${index}`);
   }
-  await mkdir4(projectPath, { recursive: true });
+  await mkdir3(projectPath, { recursive: true });
   let importedSessions = 0;
   const importedSessionRecords = [];
   const importedSessionsRoot = join6(getCodexHomeDir3(), "sessions");
@@ -7334,9 +6377,9 @@ async function importProjectZip(buffer, destinationParent) {
   for (const [index, chatEntry] of chatEntries.entries()) {
     const importedThreadId = randomUUID2();
     const target = join6(importedSessionsRoot, "imported", `${String(index + 1).padStart(6, "0")}-${importedThreadId}.jsonl`);
-    await mkdir4(dirname2(target), { recursive: true });
+    await mkdir3(dirname2(target), { recursive: true });
     const importedSessionRaw = rewriteImportedSession(chatEntry.sourceSessionRaw, projectPath, importedThreadId);
-    await writeFile4(target, importedSessionRaw, "utf8");
+    await writeFile3(target, importedSessionRaw, "utf8");
     const importedRecord = readImportedSessionRecord(importedSessionRaw, target, projectPath, importedThreadId, chatEntry.importedMetadata?.title ?? "");
     if (chatEntry.updatedAtMs > 0) {
       importedRecord.updatedAtMs = chatEntry.updatedAtMs;
@@ -7360,10 +6403,10 @@ async function importProjectZip(buffer, destinationParent) {
     const target = join6(projectPath, entry.path);
     if (!isSameOrDescendantPath(target, projectPath)) throw new Error("Project ZIP contains an unsafe path");
     if (entry.isDirectory) {
-      await mkdir4(target, { recursive: true });
+      await mkdir3(target, { recursive: true });
     } else {
-      await mkdir4(dirname2(target), { recursive: true });
-      await writeFile4(target, entry.data);
+      await mkdir3(dirname2(target), { recursive: true });
+      await writeFile3(target, entry.data);
     }
   }
   await persistWorkspaceRoot(projectPath, projectName);
@@ -7395,24 +6438,24 @@ function buildProjectlessFolderName(slug, index, uniqueSuffix = buildProjectless
   return `${slug.slice(0, maxSlugLength)}${suffix}`;
 }
 async function ensureRealDirectory(path, label) {
-  const info = await lstat2(path);
+  const info = await lstat(path);
   if (info.isSymbolicLink() || !info.isDirectory()) {
     throw new Error(`${label} must be a real directory`);
   }
 }
 async function createProjectlessThreadDirectory(prompt) {
   const workspaceRoot = join6(homedir5(), "Documents", "Codex");
-  await mkdir4(workspaceRoot, { recursive: true });
+  await mkdir3(workspaceRoot, { recursive: true });
   await ensureRealDirectory(workspaceRoot, "Projectless workspace root");
   const dateDir = join6(workspaceRoot, formatProjectlessDateSegment());
-  await mkdir4(dateDir, { recursive: true });
+  await mkdir3(dateDir, { recursive: true });
   await ensureRealDirectory(dateDir, "Projectless thread date directory");
   const slug = buildProjectlessPromptSlug(prompt);
   for (let index = 0; index < PROJECTLESS_THREAD_DIRECTORY_MAX_ATTEMPTS; index += 1) {
     const folderName = buildProjectlessFolderName(slug, index);
     const cwd = join6(dateDir, folderName);
     try {
-      await mkdir4(cwd, { recursive: false });
+      await mkdir3(cwd, { recursive: false });
       return { cwd, outputDirectory: cwd, workspaceRoot };
     } catch {
       try {
@@ -7538,6 +6581,15 @@ async function fetchCustomEndpointDefaultModel(baseUrl, apiKey) {
   } catch {
     return "";
   }
+}
+async function fetchCustomEndpointModelIds(baseUrl, apiKey) {
+  const normalizedBaseUrl = baseUrl.trim();
+  if (!normalizedBaseUrl) return [];
+  const modelsUrl = buildProviderModelsUrl(normalizedBaseUrl, null);
+  const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+  const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(PROVIDER_MODELS_FETCH_TIMEOUT_MS) });
+  if (!response.ok) return [];
+  return normalizeProviderModelsData(await response.json());
 }
 async function fetchOpenCodeZenModelIds(apiKey) {
   const headers = {};
@@ -7675,7 +6727,7 @@ async function readProviderModelIdsForProvider(appServer, providerId) {
     } catch {
     }
     return {
-      data: ["big-pickle", "minimax-m2.5-free", "nemotron-3-super-free", "trinity-large-preview-free"],
+      data: ["muse-spark-1.3-contributor-free", "muse-spark-1.2-contributor-free", "mimo-v2.5-free", "nemotron-3-ultra-free"],
       providerId: "opencode-zen",
       source: "provider"
     };
@@ -7686,6 +6738,17 @@ async function readProviderModelIdsForProvider(appServer, providerId) {
       providerId: "openrouter-free",
       source: "provider"
     };
+  }
+  if (normalizedProviderId === "custom-endpoint" && fmState?.provider === "custom" && fmState.customBaseUrl) {
+    try {
+      return {
+        data: await fetchCustomEndpointModelIds(fmState.customBaseUrl, fmState.apiKey ?? ""),
+        providerId: "custom_endpoint",
+        source: "custom"
+      };
+    } catch {
+      return { data: [], providerId: "custom_endpoint", source: "custom" };
+    }
   }
   return readProviderBackedModelIds(appServer);
 }
@@ -7814,7 +6877,7 @@ async function addPackageJsonCommands(cwd, addCommand) {
   }
 }
 async function addMakefileCommands(cwd, addCommand) {
-  const makefilePath = existsSync4(join6(cwd, "Makefile")) ? join6(cwd, "Makefile") : existsSync4(join6(cwd, "makefile")) ? join6(cwd, "makefile") : "";
+  const makefilePath = existsSync3(join6(cwd, "Makefile")) ? join6(cwd, "Makefile") : existsSync3(join6(cwd, "makefile")) ? join6(cwd, "makefile") : "";
   if (!makefilePath) return;
   try {
     const raw = await readFile3(makefilePath, "utf8");
@@ -7856,9 +6919,9 @@ async function addScriptFileCommands(directory, commandPrefix, addCommand) {
   }
 }
 function resolvePackageManager(cwd) {
-  if (existsSync4(join6(cwd, "pnpm-lock.yaml"))) return "pnpm";
-  if (existsSync4(join6(cwd, "yarn.lock"))) return "yarn";
-  if (existsSync4(join6(cwd, "bun.lock")) || existsSync4(join6(cwd, "bun.lockb"))) return "bun";
+  if (existsSync3(join6(cwd, "pnpm-lock.yaml"))) return "pnpm";
+  if (existsSync3(join6(cwd, "yarn.lock"))) return "yarn";
+  if (existsSync3(join6(cwd, "bun.lock")) || existsSync3(join6(cwd, "bun.lockb"))) return "bun";
   return "npm";
 }
 function formatPackageScriptCommand(packageManager, scriptName) {
@@ -7870,368 +6933,6 @@ function formatPackageScriptCommand(packageManager, scriptName) {
 }
 function quoteShellTokenIfNeeded(value) {
   return /^[A-Za-z0-9_./:@-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
-}
-function readBoolean3(value) {
-  return value === true;
-}
-function readNumber3(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-function buildComposioInvocation(args) {
-  const overrideCommand = process.env.CODEXUI_COMPOSIO_COMMAND?.trim();
-  if (overrideCommand) {
-    const invocation = getSpawnInvocation(overrideCommand, args);
-    return {
-      command: invocation.command,
-      args: invocation.args,
-      displayCommand: `${overrideCommand} ${args.map(quoteShellTokenIfNeeded).join(" ")}`.trim()
-    };
-  }
-  return buildInstalledComposioInvocation(args);
-}
-function buildInstalledComposioInvocation(args) {
-  const candidates = [
-    join6(homedir5(), ".composio", "composio"),
-    "composio"
-  ];
-  for (const candidate of candidates) {
-    if ((candidate.includes("/") || candidate.includes("\\")) && !existsSync4(candidate)) continue;
-    const invocation = getSpawnInvocation(candidate, args);
-    return {
-      command: invocation.command,
-      args: invocation.args,
-      displayCommand: `${candidate} ${args.map(quoteShellTokenIfNeeded).join(" ")}`.trim()
-    };
-  }
-  return null;
-}
-function probeComposioInvocation(invocation) {
-  const probe = spawnSync4(invocation.command, invocation.args, {
-    encoding: "utf8",
-    env: process.env,
-    windowsHide: true
-  });
-  const output = `${probe.stdout ?? ""}${probe.stderr ?? ""}`.trim();
-  return {
-    available: !probe.error && probe.status === 0,
-    cliVersion: probe.status === 0 ? (probe.stdout ?? "").trim() : "",
-    output
-  };
-}
-function resolveComposioInvocation(args) {
-  const invocation = buildComposioInvocation(args);
-  const versionInvocation = buildComposioInvocation(["--version"]);
-  if (invocation && versionInvocation && probeComposioInvocation(versionInvocation).available) return invocation;
-  return null;
-}
-function parseComposioJson(stdout, fallback) {
-  const trimmed = stdout.trim();
-  if (!trimmed) {
-    throw new Error(fallback);
-  }
-  return JSON.parse(trimmed);
-}
-async function runComposioJson(args, fallback) {
-  const invocation = resolveComposioInvocation(args);
-  if (!invocation) {
-    throw new Error("Composio CLI is not installed");
-  }
-  const child = spawn4(invocation.command, invocation.args, {
-    env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true
-  });
-  let stdout = "";
-  let stderr = "";
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
-  child.stdout.on("data", (chunk) => {
-    stdout += chunk;
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
-  const exitCode = await new Promise((resolveExit, reject) => {
-    child.once("error", reject);
-    child.once("close", (code) => resolveExit(code ?? 0));
-  });
-  if (exitCode !== 0) {
-    throw new Error(stderr.trim() || stdout.trim() || fallback);
-  }
-  try {
-    return parseComposioJson(stdout, fallback);
-  } catch (error) {
-    const details = stderr.trim() || stdout.trim();
-    throw new Error(details || getErrorMessage6(error, fallback));
-  }
-}
-async function readComposioUserData() {
-  try {
-    const raw = await readFile3(COMPOSIO_USER_DATA_PATH, "utf8");
-    const payload = asRecord6(JSON.parse(raw));
-    if (!payload) return null;
-    return {
-      apiKey: readNonEmptyString(payload.api_key),
-      baseUrl: readNonEmptyString(payload.base_url),
-      webUrl: readNonEmptyString(payload.web_url),
-      orgId: readNonEmptyString(payload.org_id),
-      testUserId: readNonEmptyString(payload.test_user_id)
-    };
-  } catch {
-    return null;
-  }
-}
-function normalizeComposioConnection(value) {
-  const record = asRecord6(value);
-  if (!record) return null;
-  const authConfig = asRecord6(record.auth_config);
-  return {
-    id: readNonEmptyString(record.id),
-    wordId: readNonEmptyString(record.word_id),
-    alias: readNonEmptyString(record.alias),
-    status: readNonEmptyString(record.status),
-    authScheme: readNonEmptyString(record.authScheme || authConfig?.auth_scheme),
-    createdAt: readNonEmptyString(record.created_at),
-    updatedAt: readNonEmptyString(record.updated_at),
-    isComposioManaged: readBoolean3(authConfig?.is_composio_managed),
-    isDisabled: readBoolean3(record.is_disabled)
-  };
-}
-function normalizeComposioToolkit(value, connectionsBySlug) {
-  const record = asRecord6(value);
-  if (!record) return null;
-  const slug = readNonEmptyString(record.slug);
-  if (!slug) return null;
-  const connectionRows = connectionsBySlug.get(slug) ?? [];
-  return {
-    slug,
-    name: readNonEmptyString(record.name),
-    description: readNonEmptyString(record.description),
-    logoUrl: readNonEmptyString(record.logo || record.meta && asRecord6(record.meta)?.logo),
-    latestVersion: readNonEmptyString(record.latest_version || record.latestVersion),
-    toolsCount: readNumber3(record.tools_count),
-    triggersCount: readNumber3(record.triggers_count),
-    isNoAuth: readBoolean3(record.is_no_auth),
-    enabled: record.enabled !== false,
-    authModes: Array.isArray(record.auth_modes) ? record.auth_modes.map(readNonEmptyString).filter(Boolean) : [],
-    activeCount: connectionRows.filter((row) => row.status === "ACTIVE" && !row.isDisabled).length,
-    totalConnections: connectionRows.length,
-    connectionStatuses: [...new Set(connectionRows.map((row) => row.status).filter(Boolean))]
-  };
-}
-function normalizeComposioTool(value) {
-  const record = asRecord6(value);
-  if (!record) return null;
-  const slug = readNonEmptyString(record.slug);
-  if (!slug) return null;
-  return {
-    slug,
-    name: readNonEmptyString(record.name),
-    description: readNonEmptyString(record.description)
-  };
-}
-async function readComposioConnectionsBySlug() {
-  const payload = asRecord6(await runComposioJson(["connections", "list"], "Failed to list Composio connections"));
-  const bySlug = /* @__PURE__ */ new Map();
-  for (const [slug, rawRows] of Object.entries(payload ?? {})) {
-    if (!Array.isArray(rawRows)) continue;
-    const rows = rawRows.map(normalizeComposioConnection).filter((row) => row !== null);
-    bySlug.set(slug, rows);
-  }
-  return bySlug;
-}
-async function readComposioStatus() {
-  const versionInvocation = buildComposioInvocation(["--version"]);
-  const probe = versionInvocation ? probeComposioInvocation(versionInvocation) : { available: false, cliVersion: "", output: "" };
-  const available = probe.available;
-  const cliVersion = probe.cliVersion;
-  const userData = await readComposioUserData();
-  if (!available) {
-    return {
-      available: false,
-      authenticated: false,
-      cliVersion,
-      email: "",
-      defaultOrgName: "",
-      defaultOrgId: userData?.orgId ?? "",
-      webUrl: userData?.webUrl ?? "",
-      baseUrl: userData?.baseUrl ?? "",
-      testUserId: userData?.testUserId ?? ""
-    };
-  }
-  try {
-    const payload = asRecord6(await runComposioJson(["whoami"], "Failed to read Composio account status"));
-    return {
-      available: true,
-      authenticated: true,
-      cliVersion,
-      email: readNonEmptyString(payload?.email),
-      defaultOrgName: readNonEmptyString(payload?.default_org_name),
-      defaultOrgId: readNonEmptyString(payload?.default_org_id) || userData?.orgId || "",
-      webUrl: userData?.webUrl || "https://dashboard.composio.dev/",
-      baseUrl: userData?.baseUrl || "https://backend.composio.dev",
-      testUserId: readNonEmptyString(payload?.test_user_id) || userData?.testUserId || ""
-    };
-  } catch {
-    return {
-      available: true,
-      authenticated: false,
-      cliVersion,
-      email: "",
-      defaultOrgName: "",
-      defaultOrgId: userData?.orgId ?? "",
-      webUrl: userData?.webUrl || "https://dashboard.composio.dev/",
-      baseUrl: userData?.baseUrl || "https://backend.composio.dev",
-      testUserId: userData?.testUserId ?? ""
-    };
-  }
-}
-async function listComposioConnectors(query, cursor = null, limit = 50) {
-  const args = ["dev", "toolkits", "list", "--limit", String(COMPOSIO_CONNECTORS_PAGE_LIMIT_MAX)];
-  const trimmedQuery = query.trim();
-  if (trimmedQuery) {
-    args.push("--query", trimmedQuery);
-  }
-  const [payload, connectionsBySlug] = await Promise.all([
-    runComposioJson(args, "Failed to list Composio toolkits"),
-    readComposioConnectionsBySlug()
-  ]);
-  const allRows = payload.map((item) => normalizeComposioToolkit(item, connectionsBySlug)).filter((row) => row !== null);
-  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(COMPOSIO_CONNECTORS_PAGE_LIMIT_MAX, Math.floor(limit))) : 50;
-  const safeCursor = parseComposioCursor(cursor, allRows.length);
-  return {
-    data: allRows.slice(safeCursor, safeCursor + safeLimit),
-    nextCursor: safeCursor + safeLimit < allRows.length ? String(safeCursor + safeLimit) : null,
-    total: allRows.length
-  };
-}
-function parseComposioCursor(cursor, maxLength) {
-  const trimmed = cursor?.trim() ?? "";
-  const parsed = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) return 0;
-  if (parsed >= maxLength) return maxLength;
-  return parsed;
-}
-function parseComposioLimit(rawLimit) {
-  const parsed = Number.parseInt((rawLimit ?? "").trim(), 10);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) return 50;
-  return Math.max(1, Math.min(COMPOSIO_CONNECTORS_PAGE_LIMIT_MAX, parsed));
-}
-async function readComposioConnectorDetail(slug) {
-  const normalizedSlug = slug.trim();
-  if (!normalizedSlug) {
-    throw new Error("Missing Composio connector slug");
-  }
-  const [infoPayload, toolsPayload, connectionsPayload, userData] = await Promise.all([
-    runComposioJson(["dev", "toolkits", "info", normalizedSlug], `Failed to load Composio toolkit ${normalizedSlug}`),
-    runComposioJson(["tools", "list", normalizedSlug, "--limit", "10"], `Failed to list tools for ${normalizedSlug}`),
-    runComposioJson(["link", normalizedSlug, "--list"], `Failed to list connections for ${normalizedSlug}`),
-    readComposioUserData()
-  ]);
-  const connections = Array.isArray(connectionsPayload.items) ? connectionsPayload.items.map(normalizeComposioConnection).filter((row) => row !== null) : [];
-  const connector = normalizeComposioToolkit(infoPayload, /* @__PURE__ */ new Map([[normalizedSlug, connections]]));
-  if (!connector) {
-    throw new Error(`Unknown Composio connector: ${normalizedSlug}`);
-  }
-  return {
-    connector,
-    connections,
-    tools: Array.isArray(toolsPayload) ? toolsPayload.map(normalizeComposioTool).filter((row) => row !== null) : [],
-    dashboardUrl: userData?.webUrl || "https://dashboard.composio.dev/"
-  };
-}
-async function startComposioLink(slug) {
-  const normalizedSlug = slug.trim();
-  if (!normalizedSlug) {
-    throw new Error("Missing Composio connector slug");
-  }
-  const payload = asRecord6(await runComposioJson(["link", normalizedSlug, "--no-wait"], `Failed to start Composio link for ${normalizedSlug}`));
-  return {
-    status: readNonEmptyString(payload?.status),
-    message: readNonEmptyString(payload?.message),
-    connectedAccountId: readNonEmptyString(payload?.connected_account_id),
-    redirectUrl: readNonEmptyString(payload?.redirect_url),
-    toolkit: readNonEmptyString(payload?.toolkit),
-    projectType: readNonEmptyString(payload?.project_type)
-  };
-}
-async function startComposioLogin() {
-  const invocation = resolveComposioInvocation(["login", "--no-browser", "-y"]);
-  if (!invocation) {
-    throw new Error("Composio CLI is not installed");
-  }
-  const proc = spawn4(invocation.command, invocation.args, {
-    cwd: process.cwd(),
-    env: process.env,
-    detached: true,
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true
-  });
-  proc.unref();
-  let stdout = "";
-  let stderr = "";
-  proc.stdout.setEncoding("utf8");
-  proc.stderr.setEncoding("utf8");
-  proc.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
-  const loginUrl = await new Promise((resolveLoginUrl, reject) => {
-    const timeout = setTimeout(() => {
-      proc.kill("SIGTERM");
-      reject(new Error(stderr.trim() || stdout.trim() || "Timed out waiting for Composio CLI login URL"));
-    }, 1e4);
-    const finish = (url) => {
-      clearTimeout(timeout);
-      proc.stdout.destroy();
-      proc.stderr.destroy();
-      resolveLoginUrl(url);
-    };
-    proc.once("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-    proc.once("close", (code) => {
-      clearTimeout(timeout);
-      reject(new Error(stderr.trim() || stdout.trim() || `Composio CLI login exited with code ${code ?? 0}`));
-    });
-    proc.stdout.on("data", (chunk) => {
-      stdout += chunk;
-      const url = stdout.match(/https?:\/\/\S+/)?.[0] ?? "";
-      if (url) finish(url);
-    });
-  });
-  const cliKey = loginUrl ? new URL(loginUrl).searchParams.get("cliKey") ?? "" : "";
-  return {
-    status: "started",
-    message: "Composio CLI login URL created",
-    loginUrl,
-    cliKey,
-    expiresAt: ""
-  };
-}
-async function installComposioCli() {
-  const command = "bash";
-  const installScriptUrl = "https://composio.dev/install";
-  const args = ["-lc", `curl -fsSL ${installScriptUrl} | bash`];
-  const invocation = getSpawnInvocation(command, args);
-  const env = {
-    ...process.env,
-    COMPOSIO_INSTALL_DIR: process.env.COMPOSIO_INSTALL_DIR?.trim() || join6(homedir5(), ".composio")
-  };
-  const result = spawnSync4(invocation.command, invocation.args, {
-    encoding: "utf8",
-    env,
-    windowsHide: true
-  });
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
-  if (result.error || result.status !== 0) {
-    throw new Error(output || result.error?.message || "Failed to install Composio CLI");
-  }
-  return {
-    ok: true,
-    command: `curl -fsSL ${installScriptUrl} | bash`,
-    output
-  };
 }
 function countRecoveredContentLines(value) {
   if (!value) return 0;
@@ -8738,8 +7439,8 @@ async function applyTurnFileChanges(cwd, turnInfos, allowedPatchIds) {
       const movedToPath = change.movedToPath ? isAbsolute2(change.movedToPath) ? change.movedToPath : join6(cwd, change.movedToPath) : null;
       try {
         if (change.operation === "add") {
-          await mkdir4(dirname2(filePath), { recursive: true });
-          await writeFile4(filePath, change.diff ? `${change.diff}
+          await mkdir3(dirname2(filePath), { recursive: true });
+          await writeFile3(filePath, change.diff ? `${change.diff}
 ` : "", "utf8");
           applied++;
           patchApplied = true;
@@ -8769,15 +7470,15 @@ async function applyTurnFileChanges(cwd, turnInfos, allowedPatchIds) {
         if (movedToPath) {
           if (sourcePath === movedToPath) {
             if (newContent !== currentContent) {
-              await writeFile4(movedToPath, newContent, "utf8");
+              await writeFile3(movedToPath, newContent, "utf8");
             }
           } else {
-            await mkdir4(dirname2(movedToPath), { recursive: true });
-            await writeFile4(movedToPath, newContent, "utf8");
+            await mkdir3(dirname2(movedToPath), { recursive: true });
+            await writeFile3(movedToPath, newContent, "utf8");
             await rm4(filePath, { force: true });
           }
         } else if (newContent !== currentContent) {
-          await writeFile4(filePath, newContent, "utf8");
+          await writeFile3(filePath, newContent, "utf8");
         }
         applied++;
         patchApplied = true;
@@ -8840,13 +7541,13 @@ async function revertTurnFileChanges(cwd, turnInfos, allowedPatchIds) {
             const currentContent = await readFile3(sourcePath, "utf8");
             const newContent = reverseV4aDiff(currentContent, change.diff);
             if (newContent !== null && newContent !== currentContent) {
-              const { writeFile: writeFile7 } = await import("fs/promises");
+              const { writeFile: writeFile6 } = await import("fs/promises");
               if (movedToPath) {
-                await mkdir4(dirname2(filePath), { recursive: true });
-                await writeFile7(filePath, newContent);
+                await mkdir3(dirname2(filePath), { recursive: true });
+                await writeFile6(filePath, newContent);
                 await rm4(movedToPath, { force: true });
               } else {
-                await writeFile7(filePath, newContent);
+                await writeFile6(filePath, newContent);
               }
               reverted++;
               patchRevertedPaths.add(filePath);
@@ -8854,7 +7555,7 @@ async function revertTurnFileChanges(cwd, turnInfos, allowedPatchIds) {
               patchReverted = true;
               reversed = true;
             } else if (newContent !== null && movedToPath) {
-              await mkdir4(dirname2(filePath), { recursive: true });
+              await mkdir3(dirname2(filePath), { recursive: true });
               await rename2(movedToPath, filePath);
               reverted++;
               patchRevertedPaths.add(filePath);
@@ -9063,16 +7764,16 @@ async function createComposerPromptFile(name, content) {
   const trimmedContent = content.trim();
   if (!trimmedContent) throw new Error("Prompt content is required");
   const promptsDir = getPromptsDir();
-  await mkdir4(promptsDir, { recursive: true });
+  await mkdir3(promptsDir, { recursive: true });
   const baseFileName = promptNameToFileName(trimmedName);
   let targetPath = join6(promptsDir, baseFileName);
   let suffix = 2;
-  while (existsSync4(targetPath)) {
+  while (existsSync3(targetPath)) {
     const nextFileName = `${baseFileName.replace(/\.md$/i, "")}-${suffix}.md`;
     targetPath = join6(promptsDir, nextFileName);
     suffix += 1;
   }
-  await writeFile4(targetPath, `${trimmedContent}
+  await writeFile3(targetPath, `${trimmedContent}
 `, "utf8");
   return {
     name: basename4(targetPath).replace(/\.md$/i, ""),
@@ -9156,7 +7857,7 @@ async function ensureRepoHasInitialCommit(repoRoot) {
   try {
     await stat4(agentsPath);
   } catch {
-    await writeFile4(agentsPath, "", "utf8");
+    await writeFile3(agentsPath, "", "utf8");
   }
   await runCommand3("git", ["add", "AGENTS.md"], { cwd: repoRoot });
   await runCommand3(
@@ -9236,8 +7937,8 @@ async function removeEmptyGitRelativeParents(repoRoot, filePath) {
 async function rollbackPreservedUntrackedFiles(entries) {
   for (const entry of entries.slice().reverse()) {
     try {
-      if (existsSync4(entry.backupPath) && !existsSync4(entry.sourcePath)) {
-        await mkdir4(dirname2(entry.sourcePath), { recursive: true });
+      if (existsSync3(entry.backupPath) && !existsSync3(entry.sourcePath)) {
+        await mkdir3(dirname2(entry.sourcePath), { recursive: true });
         await rename2(entry.backupPath, entry.sourcePath);
       }
     } catch {
@@ -9257,7 +7958,7 @@ async function preserveUntrackedFilesForGitTarget(repoRoot, targetRef) {
   for (const filePath of conflictingUntrackedPaths) {
     const sourcePath = resolveGitRelativePath(repoRoot, filePath);
     const backupPath = join6(backupRoot, ...filePath.split("/"));
-    await mkdir4(dirname2(backupPath), { recursive: true });
+    await mkdir3(dirname2(backupPath), { recursive: true });
     await rename2(sourcePath, backupPath);
     movedFiles.push({ filePath, sourcePath, backupPath });
     await removeEmptyGitRelativeParents(repoRoot, filePath);
@@ -9502,7 +8203,7 @@ async function refreshChatgptAuthTokensForExternalAuth(params = {}) {
       ...nextIdToken ? { id_token: nextIdToken } : {}
     }
   };
-  await writeFile4(authPath, JSON.stringify(nextAuth, null, 2), { encoding: "utf8", mode: 384 });
+  await writeFile3(authPath, JSON.stringify(nextAuth, null, 2), { encoding: "utf8", mode: 384 });
   return {
     accessToken,
     chatgptAccountId,
@@ -9648,8 +8349,8 @@ function hasExplicitCodexModelProviderConfigSync() {
   return value;
 }
 async function writeFreeModeStateFile(statePath, state) {
-  await mkdir4(dirname2(statePath), { recursive: true });
-  await writeFile4(statePath, JSON.stringify(state), { encoding: "utf8", mode: 384 });
+  await mkdir3(dirname2(statePath), { recursive: true });
+  await writeFile3(statePath, JSON.stringify(state), { encoding: "utf8", mode: 384 });
 }
 function ensureDefaultFreeModeStateForMissingAuthSync(statePath) {
   const current = readFreeModeStateSync(statePath);
@@ -9920,7 +8621,7 @@ async function writeThreadHeartbeatAutomation(input) {
     throw new Error("threadId, name, prompt, and rrule are required");
   }
   const automationRoot = getCodexAutomationsDir();
-  await mkdir4(automationRoot, { recursive: true });
+  await mkdir3(automationRoot, { recursive: true });
   const existing = input.id ? await readThreadHeartbeatAutomation(threadId, input.id.trim()) : null;
   const entries = await readdir3(automationRoot, { withFileTypes: true }).catch(() => []);
   const existingIds = new Set(entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name));
@@ -9941,13 +8642,13 @@ async function writeThreadHeartbeatAutomation(input) {
     updatedAtMs: now,
     nextRunAtMs: null
   };
-  await mkdir4(automationDir, { recursive: true });
-  await writeFile4(join6(automationDir, "automation.toml"), serializeAutomationToml(record), "utf8");
+  await mkdir3(automationDir, { recursive: true });
+  await writeFile3(join6(automationDir, "automation.toml"), serializeAutomationToml(record), "utf8");
   const memoryPath = join6(automationDir, "memory.md");
   try {
     await stat4(memoryPath);
   } catch {
-    await writeFile4(memoryPath, "", "utf8");
+    await writeFile3(memoryPath, "", "utf8");
   }
   return record;
 }
@@ -10013,7 +8714,7 @@ async function writeProjectCronAutomation(input) {
     throw new Error("Project automation cwd must be an absolute path");
   }
   const automationRoot = getCodexAutomationsDir();
-  await mkdir4(automationRoot, { recursive: true });
+  await mkdir3(automationRoot, { recursive: true });
   const existing = input.id ? await readProjectCronAutomation(projectName, input.id.trim()) : null;
   const entries = await readdir3(automationRoot, { withFileTypes: true }).catch(() => []);
   const existingIds = new Set(entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name));
@@ -10034,13 +8735,13 @@ async function writeProjectCronAutomation(input) {
     updatedAtMs: now,
     nextRunAtMs: null
   };
-  await mkdir4(automationDir, { recursive: true });
-  await writeFile4(join6(automationDir, "automation.toml"), serializeAutomationToml(record), "utf8");
+  await mkdir3(automationDir, { recursive: true });
+  await writeFile3(join6(automationDir, "automation.toml"), serializeAutomationToml(record), "utf8");
   const memoryPath = join6(automationDir, "memory.md");
   try {
     await stat4(memoryPath);
   } catch {
-    await writeFile4(memoryPath, "", "utf8");
+    await writeFile3(memoryPath, "", "utf8");
   }
   return record;
 }
@@ -10054,7 +8755,7 @@ async function deleteProjectCronAutomation(projectName, automationId = "") {
     const remainingCwds = automation.cwds.filter((cwd) => cwd !== normalizedProjectName);
     if (remainingCwds.length > 0) {
       const record = { ...automation, cwds: remainingCwds, updatedAtMs: Date.now() };
-      await writeFile4(join6(getCodexAutomationsDir(), automation.id, "automation.toml"), serializeAutomationToml(record), "utf8");
+      await writeFile3(join6(getCodexAutomationsDir(), automation.id, "automation.toml"), serializeAutomationToml(record), "utf8");
     } else {
       await rm4(join6(getCodexAutomationsDir(), automation.id), { recursive: true, force: true });
     }
@@ -10066,7 +8767,7 @@ async function deleteProjectCronAutomation(projectName, automationId = "") {
     const remainingCwds = automation.cwds.filter((cwd) => cwd !== normalizedProjectName);
     if (remainingCwds.length > 0) {
       const record = { ...automation, cwds: remainingCwds, updatedAtMs: Date.now() };
-      await writeFile4(join6(getCodexAutomationsDir(), automation.id, "automation.toml"), serializeAutomationToml(record), "utf8");
+      await writeFile3(join6(getCodexAutomationsDir(), automation.id, "automation.toml"), serializeAutomationToml(record), "utf8");
       return;
     }
     await rm4(join6(getCodexAutomationsDir(), automation.id), { recursive: true, force: true });
@@ -10170,7 +8871,7 @@ async function writeThreadTitleCache(cache) {
     payload = {};
   }
   payload["thread-titles"] = cache;
-  await writeFile4(statePath, JSON.stringify(payload), "utf8");
+  await writeFile3(statePath, JSON.stringify(payload), "utf8");
 }
 async function readPinnedThreadIds() {
   const statePath = getCodexGlobalStatePath();
@@ -10192,7 +8893,7 @@ async function writePinnedThreadIds(threadIds) {
     payload = {};
   }
   payload[PINNED_THREAD_IDS_KEY] = normalizePinnedThreadIds(threadIds);
-  await writeFile4(statePath, JSON.stringify(payload), "utf8");
+  await writeFile3(statePath, JSON.stringify(payload), "utf8");
 }
 var FIRST_LAUNCH_PLUGINS_CARD_DISMISSED_KEY = "first-launch-plugins-card-dismissed";
 var THREAD_QUEUE_STATE_KEY = "thread-queue-state";
@@ -10274,7 +8975,7 @@ async function writeThreadQueueStateUnlocked(nextState) {
   } else {
     delete payload[THREAD_QUEUE_STATE_KEY];
   }
-  await writeFile4(statePath, JSON.stringify(payload), "utf8");
+  await writeFile3(statePath, JSON.stringify(payload), "utf8");
 }
 async function withThreadQueueStateUpdate(update) {
   const run = threadQueueMutationChain.then(async () => {
@@ -10397,7 +9098,7 @@ async function writeFirstLaunchPluginsCardDismissed(dismissed) {
     payload = {};
   }
   payload[FIRST_LAUNCH_PLUGINS_CARD_DISMISSED_KEY] = dismissed === true;
-  await writeFile4(statePath, JSON.stringify(payload), "utf8");
+  await writeFile3(statePath, JSON.stringify(payload), "utf8");
 }
 function getSessionIndexFileSignature(stats) {
   return `${String(stats.mtimeMs)}:${String(stats.size)}`;
@@ -10564,7 +9265,7 @@ async function writeWorkspaceRootsState(nextState) {
   payload["electron-workspace-root-labels"] = normalizeStringRecord(state.labels);
   payload["active-workspace-roots"] = normalizeStringArray(state.active);
   payload["project-order"] = normalizeStringArray(state.projectOrder);
-  await writeFile4(statePath, JSON.stringify(payload), "utf8");
+  await writeFile3(statePath, JSON.stringify(payload), "utf8");
 }
 var workspaceRootsMutation = Promise.resolve();
 function queueWorkspaceRootsMutation(mutation) {
@@ -10649,7 +9350,7 @@ async function readTelegramBridgeConfig() {
 async function writeTelegramBridgeConfig(nextState) {
   const normalized = normalizeTelegramBridgeConfig(nextState);
   const telegramConfigPath = getTelegramBridgeConfigPath();
-  await writeFile4(telegramConfigPath, JSON.stringify({
+  await writeFile3(telegramConfigPath, JSON.stringify({
     botToken: normalized.botToken,
     chatIds: normalized.chatIds,
     allowedUserIds: normalized.allowedUserIds
@@ -10739,11 +9440,11 @@ function handleFileUpload(req, res) {
         setJson4(res, 400, { error: "No file in request" });
         return;
       }
-      const uploadDir = join6(tmpdir4(), "codex-web-uploads");
-      await mkdir4(uploadDir, { recursive: true });
-      const destDir = await mkdtemp3(join6(uploadDir, "f-"));
+      const uploadDir = join6(tmpdir3(), "codex-web-uploads");
+      await mkdir3(uploadDir, { recursive: true });
+      const destDir = await mkdtemp2(join6(uploadDir, "f-"));
       const destPath = join6(destDir, fileName);
-      await writeFile4(destPath, fileData);
+      await writeFile3(destPath, fileData);
       setJson4(res, 200, { path: destPath });
     } catch (err) {
       setJson4(res, 500, { error: getErrorMessage6(err, "Upload failed") });
@@ -11630,7 +10331,7 @@ var MethodCatalog = class {
     if (this.methodCache) {
       return this.methodCache;
     }
-    const outDir = await mkdtemp3(join6(tmpdir4(), "codex-web-local-schema-"));
+    const outDir = await mkdtemp2(join6(tmpdir3(), "codex-web-local-schema-"));
     await this.runGenerateSchemaCommand(outDir);
     const clientRequestPath = join6(outDir, "ClientRequest.json");
     const raw = await readFile3(clientRequestPath, "utf8");
@@ -11643,7 +10344,7 @@ var MethodCatalog = class {
     if (this.notificationCache) {
       return this.notificationCache;
     }
-    const outDir = await mkdtemp3(join6(tmpdir4(), "codex-web-local-schema-"));
+    const outDir = await mkdtemp2(join6(tmpdir3(), "codex-web-local-schema-"));
     await this.runGenerateSchemaCommand(outDir);
     const serverNotificationPath = join6(outDir, "ServerNotification.json");
     const raw = await readFile3(serverNotificationPath, "utf8");
@@ -11769,7 +10470,6 @@ function createCodexBridgeMiddleware() {
     }
     return threadSearchIndexPromise;
   }
-  void initializeSkillsSyncOnStartup(appServer);
   void readTelegramBridgeConfig().then((config) => {
     if (!config.botToken) return;
     telegramBridge.configureToken(config.botToken);
@@ -12522,60 +11222,6 @@ function createCodexBridgeMiddleware() {
         res.end(upstream.body);
         return;
       }
-      if (req.method === "GET" && url.pathname === "/codex-api/composio/status") {
-        try {
-          setJson4(res, 200, await readComposioStatus());
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to read Composio status") });
-        }
-        return;
-      }
-      if (req.method === "GET" && url.pathname === "/codex-api/composio/connectors") {
-        try {
-          const query = url.searchParams.get("query") ?? "";
-          const cursor = url.searchParams.get("cursor")?.trim() ?? null;
-          const limit = parseComposioLimit(url.searchParams.get("limit"));
-          setJson4(res, 200, await listComposioConnectors(query, cursor, limit));
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to list Composio connectors") });
-        }
-        return;
-      }
-      if (req.method === "GET" && url.pathname === "/codex-api/composio/connector") {
-        try {
-          const slug = url.searchParams.get("slug") ?? "";
-          setJson4(res, 200, await readComposioConnectorDetail(slug));
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to load Composio connector") });
-        }
-        return;
-      }
-      if (req.method === "POST" && url.pathname === "/codex-api/composio/link") {
-        try {
-          const payload = asRecord6(await readJsonBody2(req));
-          const slug = readNonEmptyString(payload?.slug);
-          setJson4(res, 200, await startComposioLink(slug));
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to start Composio login") });
-        }
-        return;
-      }
-      if (req.method === "POST" && url.pathname === "/codex-api/composio/login") {
-        try {
-          setJson4(res, 200, await startComposioLogin());
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to start Composio CLI login") });
-        }
-        return;
-      }
-      if (req.method === "POST" && url.pathname === "/codex-api/composio/install") {
-        try {
-          setJson4(res, 200, await installComposioCli());
-        } catch (error) {
-          setJson4(res, 500, { error: getErrorMessage6(error, "Failed to install Composio CLI") });
-        }
-        return;
-      }
       if (req.method === "GET" && url.pathname === "/codex-api/connector-logo") {
         const src = url.searchParams.get("src")?.trim() ?? "";
         if (!src) {
@@ -12637,7 +11283,7 @@ function createCodexBridgeMiddleware() {
                 }
               } catch {
               }
-              setJson4(res, 200, { data: ["big-pickle", "minimax-m2.5-free", "nemotron-3-super-free", "trinity-large-preview-free"], exclusive: true, source: "opencode-zen" });
+              setJson4(res, 200, { data: ["muse-spark-1.3-contributor-free", "muse-spark-1.2-contributor-free", "mimo-v2.5-free", "nemotron-3-ultra-free"], exclusive: true, source: "opencode-zen" });
               return;
             }
             if (fmState.provider === "custom" && fmState.customBaseUrl) {
@@ -12715,7 +11361,7 @@ function createCodexBridgeMiddleware() {
           }
           const repoName = basename4(gitRoot) || "repo";
           const worktreesRoot = join6(getCodexHomeDir3(), "worktrees");
-          await mkdir4(worktreesRoot, { recursive: true });
+          await mkdir3(worktreesRoot, { recursive: true });
           let worktreeId = "";
           let worktreeParent = "";
           let worktreeCwd = "";
@@ -12736,7 +11382,7 @@ function createCodexBridgeMiddleware() {
             throw new Error("Failed to allocate a unique worktree id");
           }
           const startPoint = baseBranch || "HEAD";
-          await mkdir4(worktreeParent, { recursive: true });
+          await mkdir3(worktreeParent, { recursive: true });
           try {
             await runCommand3("git", ["worktree", "add", "--detach", worktreeCwd, startPoint], { cwd: gitRoot });
           } catch (error) {
@@ -13316,7 +11962,7 @@ function createCodexBridgeMiddleware() {
           pathExists = false;
         }
         if (!pathExists && createIfMissing) {
-          await mkdir4(normalizedPath, { recursive: true });
+          await mkdir3(normalizedPath, { recursive: true });
         } else if (!pathExists) {
           setJson4(res, 404, { error: "Directory does not exist" });
           return;
@@ -13340,7 +11986,7 @@ function createCodexBridgeMiddleware() {
             return;
           }
         } catch {
-          await mkdir4(normalizedPath, { recursive: true });
+          await mkdir3(normalizedPath, { recursive: true });
         }
         setJson4(res, 200, { data: { path: normalizedPath } });
         return;
@@ -13738,7 +12384,7 @@ data: ${JSON.stringify({ ok: true })}
 
 // src/server/authMiddleware.ts
 import { randomBytes as randomBytes3, timingSafeEqual } from "crypto";
-import { existsSync as existsSync5, mkdirSync, readFileSync as readFileSync3, renameSync, writeFileSync as writeFileSync2 } from "fs";
+import { existsSync as existsSync4, mkdirSync, readFileSync as readFileSync3, renameSync, writeFileSync as writeFileSync2 } from "fs";
 import { homedir as homedir6 } from "os";
 import { dirname as dirname3, join as join7 } from "path";
 var TOKEN_COOKIE = "portal_session";
@@ -13801,7 +12447,7 @@ function getSessionStorePath() {
 }
 function readPersistedSessions() {
   const sessionStorePath = getSessionStorePath();
-  if (!existsSync5(sessionStorePath)) return /* @__PURE__ */ new Map();
+  if (!existsSync4(sessionStorePath)) return /* @__PURE__ */ new Map();
   try {
     const raw = readFileSync3(sessionStorePath, "utf8");
     const parsed = JSON.parse(raw);
@@ -14531,13 +13177,13 @@ function createServer(options = {}) {
     }
     const body = typeof req.body === "string" ? req.body : "";
     try {
-      await writeFile5(localPath, body, "utf8");
+      await writeFile4(localPath, body, "utf8");
       res.status(200).json({ ok: true });
     } catch {
       res.status(404).json({ error: "File not found." });
     }
   });
-  const hasFrontendAssets = existsSync6(spaEntryFile);
+  const hasFrontendAssets = existsSync5(spaEntryFile);
   if (hasFrontendAssets) {
     app.use(express.static(distDir));
   }
@@ -14616,12 +13262,12 @@ function getCloudflaredPromptMarkerPath() {
   return join10(getCodexHomePath(), ".cloudflared-install-prompted");
 }
 function hasPromptedCloudflaredInstallPersisted() {
-  return existsSync7(getCloudflaredPromptMarkerPath());
+  return existsSync6(getCloudflaredPromptMarkerPath());
 }
 async function persistCloudflaredInstallPrompted() {
   const codexHome = getCodexHomePath();
   mkdirSync2(codexHome, { recursive: true });
-  await writeFile6(getCloudflaredPromptMarkerPath(), `${Date.now()}
+  await writeFile5(getCloudflaredPromptMarkerPath(), `${Date.now()}
 `, "utf8");
 }
 async function readCliVersion() {
@@ -14652,7 +13298,7 @@ function resolveCloudflaredCommand() {
     return "cloudflared";
   }
   const localCandidate = join10(homedir7(), ".local", "bin", "cloudflared");
-  if (existsSync7(localCandidate) && canRunCommand(localCandidate, ["--version"])) {
+  if (existsSync6(localCandidate) && canRunCommand(localCandidate, ["--version"])) {
     return localCandidate;
   }
   return null;
@@ -14758,7 +13404,7 @@ async function resolveCloudflaredForTunnel() {
 }
 function hasCodexAuth() {
   const codexHome = getCodexHomePath();
-  return existsSync7(join10(codexHome, "auth.json"));
+  return existsSync6(join10(codexHome, "auth.json"));
 }
 function ensureCodexInstalled() {
   let codexCommand = resolveCodexCommand();
@@ -14820,7 +13466,7 @@ async function persistGeneratedPassword(password) {
   const codexHome = getCodexHomePath();
   mkdirSync2(codexHome, { recursive: true });
   const passwordPath = getGeneratedPasswordPath();
-  await writeFile6(passwordPath, `${password}
+  await writeFile5(passwordPath, `${password}
 `, { encoding: "utf8", mode: 384 });
   chmodSync2(passwordPath, 384);
   return passwordPath;
@@ -15001,7 +13647,7 @@ async function persistLaunchProject(projectPath) {
     normalizedPath,
     ...activeRoots.filter((value) => value !== normalizedPath)
   ];
-  await writeFile6(statePath, JSON.stringify(payload), "utf8");
+  await writeFile5(statePath, JSON.stringify(payload), "utf8");
 }
 async function addProjectOnly(projectPath) {
   const trimmed = projectPath.trim();
