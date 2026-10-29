@@ -39,7 +39,7 @@ You run one command. It starts a local web server. You open it from your machine
 git clone --branch brutalstrikedevs-codexapp --single-branch https://github.com/vast-cow/codex-mobile.git /path/to/codexapp
 
 # 🔓 Run the local package
-npx --yes --install-links --package="/path/to/codexapp" codexapp --no-tunnel
+npm --prefix "/path/to/codexapp" start -- --no-tunnel
 
 # 🌐 Then open in browser
 # http://localhost:5900
@@ -49,16 +49,24 @@ Replace `/path/to/codexapp` with the absolute path where you want to save the re
 The clone command selects the prebuilt `brutalstrikedevs-codexapp` branch.
 Run the clone command only for initial setup; reuse the local path for subsequent launches.
 
-`--install-links` makes npm pack the local checkout and install it with its dependencies
-in the npm cache. No separate `npm install` or global installation is required.
-The first run needs network access to download dependencies.
-Keep `--install-links` before `codexapp`, as it is an npm option.
-See [npm's install-links documentation](https://docs.npmjs.com/cli/v11/using-npm/config/#install-links).
+`npm start` runs `scripts/run-local.cjs`, which packs the current checkout and
+passes a tarball named by its SHA-256 content hash to `npm exec` (`npx`). npm
+installs runtime dependencies into its cache; no separate `npm install` or global
+installation is required. The first run needs network access for dependencies.
+Unchanged contents reuse the same installed package; changed contents get a new
+package path. CLI options go after `--`.
+
+Avoid `npx --package="/path/to/codexapp"` for repeated launches of an edited
+checkout. npm can reuse the installed directory snapshot by its resolved path,
+even with `--prefer-online` and `--install-links`; restarting that command can
+therefore keep serving old JavaScript. Use `npm start` after pulling or editing.
+The launcher prints the checkout path and package revision at startup. Stop the
+previous server before restarting, then reload the browser page.
 
 If your shell is already in the cloned repository on Linux or Termux, you can use:
 
 ```bash
-npx --yes --install-links --package="$PWD" codexapp --no-tunnel --port 5900
+npm start -- --no-tunnel --port 5900
 ```
 
 The npm package name is `@brutalstrikedevs/codexapp`; the executable is `codexapp`.
@@ -67,7 +75,7 @@ The default port is `5900`; use `--port <port>` to override it.
 By default, `codexapp` starts without a tunnel. Use `--tunnel` to enable a cloudflared tunnel:
 
 ```bash
-npx --yes --install-links --package="/path/to/codexapp" codexapp --tunnel
+npm --prefix "/path/to/codexapp" start -- --tunnel
 ```
 
 When enabled, it prints the tunnel URL and terminal QR code in startup output.
@@ -76,7 +84,7 @@ You can also explicitly disable the tunnel with `--no-tunnel`.
 To disable web UI authentication, use `--no-password`:
 
 ```bash
-npx --yes --install-links --package="/path/to/codexapp" codexapp --no-password
+npm --prefix "/path/to/codexapp" start -- --no-password
 ```
 
 This also skips password file generation and the `Generated password file` startup message.
@@ -86,14 +94,14 @@ By default, an automatically generated password is saved to `$CODEX_HOME/codexui
 If you are using a provider or AI gateway that is already authenticated and do not want `codexapp` to force `codex login` during startup, use:
 
 ```bash
-npx --yes --install-links --package="/path/to/codexapp" codexapp --no-login
+npm --prefix "/path/to/codexapp" start -- --no-login
 ```
 
 By default, `codexapp` leaves the sandbox mode to Codex's configuration.
 Use `--sandbox-mode` to override it explicitly:
 
 ```bash
-npx --yes --install-links --package="/path/to/codexapp" codexapp --sandbox-mode workspace-write
+npm --prefix "/path/to/codexapp" start -- --sandbox-mode workspace-write
 ```
 
 Supported modes are `read-only`, `workspace-write`, and `danger-full-access`.
@@ -105,18 +113,18 @@ After cloning the repository as shown above:
 
 ```bash
 node -v   # should be 18+
-npx --yes --install-links --package="/path/to/codexapp" codexapp
+npm --prefix "/path/to/codexapp" start --
 ```
 
 ### Windows 🪟 (PowerShell)
 
 Replace `C:/path/to/codexapp` with your preferred local directory. Clone it once, then
-reuse the `npx` command to launch it again.
+reuse the `npm start` command to launch it again.
 
 ```powershell
 node -v   # 18+
 git clone --branch brutalstrikedevs-codexapp --single-branch https://github.com/vast-cow/codex-mobile.git C:/path/to/codexapp
-npx --yes --install-links --package="C:/path/to/codexapp" codexapp
+npm --prefix "C:/path/to/codexapp" start --
 ```
 
 ### Termux (Android) 🤖
@@ -124,7 +132,7 @@ npx --yes --install-links --package="C:/path/to/codexapp" codexapp
 pkg update && pkg upgrade -y
 pkg install nodejs git -y
 git clone --branch brutalstrikedevs-codexapp --single-branch https://github.com/vast-cow/codex-mobile.git "$HOME/codexapp"
-npx --yes --install-links --package="$HOME/codexapp" codexapp
+npm --prefix "$HOME/codexapp" start --
 ```
 
 Android background requirements:
@@ -136,7 +144,7 @@ Android background requirements:
 ```bash
 termux-wake-lock
 ```
-5. Open the shown URL in your Android browser. If the app is killed, return to Termux and run `npx --yes --install-links --package="$HOME/codexapp" codexapp` again.
+5. Open the shown URL in your Android browser. If the app is killed, return to Termux and run `npm --prefix "$HOME/codexapp" start --` again.
 
 ---
 
@@ -147,7 +155,7 @@ If you want to use codexUI from iPhone or iPad Safari, serving it over HTTPS is 
 A practical private setup is to run codexUI locally and publish it inside your tailnet with Tailscale Serve:
 
 ```powershell
-npx --yes --install-links --package="C:/path/to/codexapp" codexapp --no-tunnel --port 5900
+npm --prefix "C:/path/to/codexapp" start -- --no-tunnel --port 5900
 tailscale serve --bg 5900
 ```
 
@@ -177,7 +185,7 @@ Notes:
 ## ✨ Features
 > **The payload.**
 
-- 🚀 One-command launch after cloning with `npx --yes --install-links --package="/path/to/codexapp" codexapp`
+- 🚀 One-command launch after cloning with `npm --prefix "/path/to/codexapp" start --`
 - 🌍 Cross-platform support for Linux, Windows, and Termux on Android
 - 🖥️ Browser-first Codex UI flow on `http://localhost:5900`
 - 🌐 LAN-friendly access from other devices on the same network
@@ -199,7 +207,7 @@ Set these environment variables before starting `codexapp`:
 export TELEGRAM_BOT_TOKEN="<your-telegram-bot-token>"
 export TELEGRAM_ALLOWED_USER_IDS="<your-telegram-user-id>,<optional-second-id>"
 export TELEGRAM_DEFAULT_CWD="$PWD" # optional, defaults to current working directory
-npx --yes --install-links --package="/path/to/codexapp" codexapp
+npm --prefix "/path/to/codexapp" start --
 ```
 
 `TELEGRAM_ALLOWED_USER_IDS` is required for safe access. Only allowlisted Telegram user IDs can use the bridge. If no allowed user IDs are configured, incoming Telegram messages are rejected.
@@ -254,7 +262,7 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 | 🌐 LAN sharing | Open UI from another device on same network |
 | 🧰 Headless workflows | Keep terminal + browser split for productivity |
 | 🔌 Custom routing | Put behind reverse proxy/tunnel if needed |
-| ⚡ Fast experiments | `npx` run without full global setup |
+| ⚡ Fast experiments | `npm start` without full global setup |
 
 ---
 
@@ -291,8 +299,9 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 | ❌ Problem | ✅ Fix |
 |---|---|
 | Port already in use | Run on a free port or stop old process |
-| `ERR_MODULE_NOT_FOUND` for `commander` or another dependency | Include `--install-links` before `codexapp` so npm installs dependencies in its cache |
-| `npx` fails | Update npm/node, then retry |
+| `ERR_MODULE_NOT_FOUND` for `commander` or another dependency | Launch with `npm start --` so npm installs runtime dependencies in its cache |
+| Old UI remains after restarting `npx --package="$PWD"` | Stop the server, run `npm start -- --port 5900`, and reload the browser |
+| `npm start` fails | Check the reported npm error and ensure Node.js 18+ and npm are installed |
 | Termux install fails | `pkg update && pkg upgrade` then reinstall `nodejs` |
 | Can’t open from other device | Check firewall, bind address, and LAN routing |
 

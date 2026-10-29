@@ -33,9 +33,11 @@
   "files": [
     "dist-production/",
     "dist-cli/",
-    "scripts/fix-pty-native-build.cjs"
+    "scripts/fix-pty-native-build.cjs",
+    "scripts/run-local.cjs"
   ],
   "scripts": {
+    "start": "node scripts/run-local.cjs",
     "repair:pty": "node scripts/fix-pty-native-build.cjs",
     "format:assets": "prettier --write \"dist/assets/*.js\"",
     "check:format:assets": "prettier --check \"dist/assets/*.js\"",
