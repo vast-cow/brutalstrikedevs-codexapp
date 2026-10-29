@@ -52,8 +52,18 @@ By default, `codexapp` starts without a tunnel. Use `--tunnel` to enable a cloud
 npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --tunnel
 ```
 
-When enabled, it prints the tunnel URL, terminal QR code, and password together in startup output.
+When enabled, it prints the tunnel URL and terminal QR code in startup output.
 You can also explicitly disable the tunnel with `--no-tunnel`.
+
+To disable web UI authentication, use `--no-password`:
+
+```bash
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --no-password
+```
+
+This also skips password file generation and the `Generated password file` startup message.
+With the default `0.0.0.0` bind address, anyone who can reach the server can use the web UI without authentication.
+By default, an automatically generated password is saved to `$CODEX_HOME/codexui-password` (default: `~/.codex/codexui-password`), and its path is shown at startup.
 
 If you are using a provider or AI gateway that is already authenticated and do not want `codexapp` to force `codex login` during startup, use:
 
