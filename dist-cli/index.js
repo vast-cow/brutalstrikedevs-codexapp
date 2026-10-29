@@ -13013,7 +13013,7 @@ async function createTextEditorHtml(localPath) {
 // src/server/httpServer.ts
 import { WebSocketServer } from "ws";
 var __dirname = dirname5(fileURLToPath(import.meta.url));
-var distDir = join9(__dirname, "..", "dist");
+var distDir = join9(__dirname, "..", "dist-production");
 var spaEntryFile = join9(distDir, "index.html");
 var IMAGE_CONTENT_TYPES = {
   ".avif": "image/avif",
@@ -13185,20 +13185,20 @@ function createServer(options = {}) {
   });
   const hasFrontendAssets = existsSync5(spaEntryFile);
   if (hasFrontendAssets) {
-    app.use(express.static(distDir));
+    app.use(express.static(distDir, { setHeaders: (res) => res.setHeader("Cache-Control", "no-cache") }));
   }
   app.use((_req, res) => {
     if (!hasFrontendAssets) {
       res.status(503).type("text/html; charset=utf-8").send(
         renderFrontendMissingHtml("Codex web UI assets are missing.", [
           `Expected: ${spaEntryFile}`,
-          "If running from source, build frontend assets with: pnpm run build:frontend",
+          "If running from source, build frontend assets with: npm run build:assets",
           "If running with npx, clear the npx cache and reinstall codexapp."
         ])
       );
       return;
     }
-    res.sendFile(spaEntryFile, (error) => {
+    res.sendFile(spaEntryFile, { headers: { "Cache-Control": "no-cache" } }, (error) => {
       if (!error) return;
       if (!res.headersSent) {
         res.status(404).type("text/html; charset=utf-8").send(renderFrontendMissingHtml("Frontend entry file not found."));

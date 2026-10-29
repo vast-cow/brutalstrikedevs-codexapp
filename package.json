@@ -31,12 +31,19 @@
     "codexui": "dist-cli/index.js"
   },
   "files": [
-    "dist/",
+    "dist-production/",
     "dist-cli/",
     "scripts/fix-pty-native-build.cjs"
   ],
   "scripts": {
-    "repair:pty": "node scripts/fix-pty-native-build.cjs"
+    "repair:pty": "node scripts/fix-pty-native-build.cjs",
+    "format:assets": "prettier --write \"dist/assets/*.js\"",
+    "check:format:assets": "prettier --check \"dist/assets/*.js\"",
+    "build:assets": "node scripts/build-assets.mjs",
+    "check:assets": "node scripts/build-assets.mjs --check",
+    "test:assets": "node --test tests/assets.test.mjs",
+    "test": "npm run check:format:assets && npm run check:assets && npm run test:assets",
+    "test:browser": "node scripts/test-browser.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -49,5 +56,12 @@
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0",
+    "acorn-walk": "8.3.4",
+    "playwright": "1.56.1",
+    "prettier": "3.6.2",
+    "terser": "5.44.0"
   }
 }

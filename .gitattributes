@@ -1,0 +1,10 @@
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.webmanifest text eol=lf
+# All frontend text inputs must hash identically on Windows and Unix.
+dist/** text=auto eol=lf
+dist-production/** text=auto eol=lf

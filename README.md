@@ -298,26 +298,84 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ---
 
-## Prebuilt distribution and validation
+## Editable bundles and production assets
 
-This branch ships compiled `dist/` and `dist-cli/` files with runtime dependencies only.
-Build tools, Vitest, and source development belong in the development checkout.
-Update the compiled files there before bringing a release into this branch.
-There are no automatic build or install hooks in this package; this follows
-[npm's guidance for prebuilt Git dependencies](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#git-urls-as-dependencies).
+`dist/assets/*.js` are the canonical, readable JavaScript sources for this branch.
+Edit these bundles directly; formatting cannot recover the original variable names,
+comments, Vue components, or TypeScript. Keep the existing chunk filenames.
 
-`node-pty` remains optional. The CLI already repairs broken native-build symlinks
-when loading terminal support and fixes spawn-helper permissions before opening a terminal.
-If native PTY support cannot load, the web UI remains available and reports that the
-integrated terminal is unavailable. For a local installation, you can also run
-`npm run repair:pty` from the package directory to invoke the repair manually.
+```text
+dist/                         Editable frontend, HTML, CSS, icons, and Service Worker
+scripts/build-assets.mjs       Build-time formatter-independent asset generator
+dist-production/              Generated frontend shipped to users
+  assets/<content-version>/   Minified JS and copied CSS; original chunk basenames
+dist-cli/index.js             Existing Express server and CLI
+```
 
-GitHub Actions checks packaging and installation from the tested GitHub commit with
-npm 10.9.9 and npm 11 on Linux and Windows. It checks CLI help, HTTP delivery of the
-built UI, and a real integrated-terminal command. The HTTP/PTY smoke check uses a
-stand-in for Codex's version check; it does not validate authenticated Codex workflows.
-Termux still requires a device check: run the local-package command above, open a thread's
-terminal, and verify command input/output, resizing, and closing the terminal.
+From a checkout with Node.js 18 or newer:
+
+```bash
+npm ci
+npm run format:assets         # Format all editable JavaScript with pinned Prettier
+npm run build:assets          # Generate the complete production directory
+npm run check:assets          # Regenerate in memory; fail on stale/missing/extra files
+npm test                      # Formatting, syntax/graph, equivalence, caching, HTTP
+node dist-cli/index.js --no-tunnel
+```
+
+Run `build:assets` after editing any frontend file, and refresh the browser to see
+changes. The CLI always serves `dist-production/`; it never falls back to readable
+JavaScript. Commit both the editable files and regenerated `dist-production/`.
+The generator copies CSS, images, and the manifest unchanged. It uses Terser in
+[fast minify mode](https://terser.org/docs/api-reference/) (no compression or name
+mangling) because these chunks were already optimized. It preserves comments and
+license notices, creates no source maps, and does not rebundle modules.
+
+The content version covers all frontend files, the generator, and the locked
+toolchain. HTML and Vite preload paths use that versioned directory; relative
+imports retain their existing chunk relationships, including cycles. Any edit
+changes all asset URLs and the Service Worker cache name together, so the old
+Vite filename hashes are never treated as proof that edited content is unchanged.
+HTTP responses require cache revalidation. The existing Service Worker navigation,
+API bypass, network-first script/style, and offline policies remain intact.
+
+Production assets are committed and included in npm's package files. Build tools
+are development dependencies only; there are no automatic build/install hooks
+and no minifier at application runtime. Both local-package installation and the
+GitHub command work without a manual build:
+
+```bash
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --no-tunnel
+```
+
+For browser validation:
+
+```bash
+npx playwright install chromium
+npm run test:browser
+```
+
+An existing Chromium installation can be selected with
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. The browser test checks rendering, imports
+all seven chunks, loads all styles, compares actual HTTP JavaScript to generated
+files, checks Service Worker activation, and reloads the shell offline.
+`npm test` and the browser smoke test isolate `CODEX_HOME` and use Node only as a
+stand-in for Codex's version probe. They do not validate authenticated Codex RPCs,
+voice transcription, external providers, or a real integrated-terminal session.
+Check those features with a configured Codex installation before a release.
+
+GitHub Actions runs the asset and HTTP tests on Linux and Windows with Node 18 and
+22, checks package contents and CLI installation, and runs Chromium on Linux.
+For pushed commits it also runs the CLI help command through a GitHub-based `npx`
+installation of that exact commit. Local tests cannot verify an unpublished commit
+through the remote GitHub URL. Termux and native Windows behavior still need device
+validation; the generator uses portable Node APIs and pure JavaScript tools.
+
+`node-pty` remains optional. The CLI repairs broken native-build symlinks when
+loading terminal support and fixes spawn-helper permissions before opening a
+terminal. If native PTY support cannot load, the UI remains available and reports
+that the integrated terminal is unavailable. Run `npm run repair:pty` from a local
+installation to invoke the repair manually.
 
 ---
 

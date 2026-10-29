@@ -1,0 +1,37 @@
+name: Frontend distribution
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  assets:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Pack and check CLI installation without build tools
+        shell: bash
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          package_file=$(node -p '"brutalstrikedevs-codexapp-" + require("./package.json").version + ".tgz"')
+          npm exec --yes --package="$RUNNER_TEMP/$package_file" -- codexapp --help
+      - name: Test GitHub installation of the pushed commit
+        if: github.event_name == 'push'
+        shell: bash
+        run: npm exec --yes --package="github:${GITHUB_REPOSITORY}#${GITHUB_SHA}" -- codexapp --help
+      - name: Install Chromium
+        if: runner.os == 'Linux' && matrix.node == 22
+        run: npx playwright install --with-deps chromium
+      - name: Check browser and offline shell
+        if: runner.os == 'Linux' && matrix.node == 22
+        run: npm run test:browser

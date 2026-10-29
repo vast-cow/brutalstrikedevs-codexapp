@@ -1,1 +1,460 @@
-import{d as G,x as v,w as C,b as J,ac as X,ad as Z,o as l,c as m,a as e,t as u,f as S,h as B,ae as b,F as tt,r as at,af as $,q as k,g as et,E as g,ag as x,y as f,_ as ot}from"./index-DaFfIKeO.js";const st={class:"automations-panel"},nt={class:"automations-toolbar"},ut={class:"automations-summary"},it={class:"automations-actions"},lt=["disabled"],rt={key:0,class:"automations-error"},dt={key:1,class:"automations-empty"},ct={key:2,class:"automations-empty"},mt={key:3,class:"automations-layout"},pt={class:"automations-list","aria-label":"Automations"},vt=["onClick","onKeydown"],ft=["data-status"],yt={class:"automation-row-main"},ht={class:"automation-row-title"},_t={class:"automation-row-meta"},bt={class:"automation-row-side"},gt=["data-status"],At={class:"automation-row-schedule"},Et=["onClick"],Lt={key:0,class:"automation-detail","aria-label":"Automation details"},Ct={class:"automation-detail-heading"},kt=["data-status"],wt={class:"automation-detail-title-wrap"},It={class:"automation-detail-grid"},Rt=["title"],jt={class:"automation-detail-prompt"},Tt=G({__name:"AutomationsPanel",props:{groups:{},projectCwdByName:{},projectDisplayNameById:{},selectedAutomationId:{}},emits:["select-automation","edit-automation","create-automation"],setup(U,{expose:F,emit:V}){const p=U,A=V,w=v({}),I=v({}),y=v(!1),h=v(""),r=v(p.selectedAutomationId??""),c=v(""),Q=f(()=>{const t=new Map;for(const a of p.groups)for(const o of a.threads)t.set(o.id,o.title);return t}),Y=f(()=>{var a,o;const t=new Map;for(const n of p.groups){const s=(a=p.projectCwdByName[n.projectName])==null?void 0:a.trim(),_=((o=p.projectDisplayNameById[n.projectName])==null?void 0:o.trim())||n.projectName;s&&t.set(s,_)}return t}),d=f(()=>{const t=[];for(const[a,o]of Object.entries(w.value)){const n=Q.value.get(a)??a;for(const s of o)t.push({rowKey:K("thread",a,s.id),automation:s,scope:"thread",scopeLabel:"Heartbeat",targetLabel:n,targetTitle:a,scheduleLabel:N(s)})}for(const[a,o]of Object.entries(I.value)){const n=Y.value.get(a)??q(a);for(const s of o)t.push({rowKey:K("project",a,s.id),automation:s,scope:"project",scopeLabel:"Project",targetLabel:n,targetTitle:a,scheduleLabel:N(s)})}return t.sort((a,o)=>{const n=a.automation.status==="ACTIVE"?0:1,s=o.automation.status==="ACTIVE"?0:1;if(n!==s)return n-s;const _=a.automation.createdAtMs??0,M=o.automation.createdAtMs??0;if(_!==M)return M-_;const P=a.automation.updatedAtMs??0,D=o.automation.updatedAtMs??0;return P!==D?D-P:a.automation.name.localeCompare(o.automation.name)})}),z=f(()=>d.value.filter(t=>t.automation.status==="ACTIVE").length),H=f(()=>d.value.filter(t=>t.automation.status==="PAUSED").length),i=f(()=>d.value.find(t=>t.rowKey===c.value)??d.value.find(t=>t.automation.id===r.value)??d.value[0]??null);C(()=>p.selectedAutomationId,t=>{t&&(r.value=t,c.value=T(t))}),C(r,t=>{t&&A("select-automation",t)}),C(d,t=>{if(t.length===0){r.value="",c.value="";return}if(!(c.value&&t.some(a=>a.rowKey===c.value))){if(r.value&&t.some(a=>a.automation.id===r.value)){c.value=T(r.value);return}(!r.value||!t.some(a=>a.automation.id===r.value))&&(r.value=t[0].automation.id,c.value=t[0].rowKey)}}),J(()=>{E()}),F({loadAutomations:E});async function E(){y.value=!0,h.value="";try{const[t,a]=await Promise.all([X(),Z()]);w.value=t,I.value=a}catch(t){h.value=t instanceof Error?t.message:"Failed to load automations"}finally{y.value=!1}}function R(t){return t==="PAUSED"?"Paused":"Active"}function j(t){A("edit-automation",{scope:t.scope,target:t.targetTitle,automation:t.automation})}function O(){A("create-automation")}function L(t){c.value=t.rowKey,r.value=t.automation.id}function T(t){var a;return((a=d.value.find(o=>o.automation.id===t))==null?void 0:a.rowKey)??""}function K(t,a,o){return`${t}:${a}:${o}`}function N(t){var o,n;if(t.status==="PAUSED")return"Paused";if(t.nextRunAtMs)return`Next ${W(t.nextRunAtMs)}`;const a=t.rrule.trim();if(/FREQ=MINUTELY/i.test(a)){const s=((o=/INTERVAL=(\d+)/i.exec(a))==null?void 0:o[1])??"1";return s==="1"?"Every minute":`Every ${s} minutes`}if(/FREQ=HOURLY/i.test(a)){const s=((n=/INTERVAL=(\d+)/i.exec(a))==null?void 0:n[1])??"1";return s==="1"?"Hourly":`Every ${s} hours`}return/FREQ=DAILY/i.test(a)?"Daily":/FREQ=WEEKLY/i.test(a)?"Weekly":"Custom schedule"}function W(t){return new Date(t).toLocaleString(void 0,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}function q(t){return t.replace(/\/+$/,"").split("/").filter(Boolean).pop()??t}return(t,a)=>(l(),m("div",st,[e("div",nt,[e("div",ut,[e("span",null,u(d.value.length)+" total",1),e("span",null,u(z.value)+" active",1),e("span",null,u(H.value)+" paused",1)]),e("div",it,[e("button",{class:"automations-create",type:"button",title:"Create a new automation",onClick:O}," New automation "),e("button",{class:"automations-refresh",type:"button",disabled:y.value,onClick:E},u(y.value?"Refreshing...":"Refresh"),9,lt)])]),h.value?(l(),m("p",rt,u(h.value),1)):S("",!0),y.value&&d.value.length===0?(l(),m("div",dt,[B(b,{class:"automations-empty-icon"}),a[1]||(a[1]=e("p",null,"Loading automations...",-1))])):d.value.length===0?(l(),m("div",ct,[B(b,{class:"automations-empty-icon"}),a[2]||(a[2]=e("p",null,"No automations yet",-1)),a[3]||(a[3]=e("span",null,"Use a thread or project menu to add an automation.",-1))])):(l(),m("div",mt,[e("section",pt,[(l(!0),m(tt,null,at(d.value,o=>(l(),m("div",{key:o.rowKey,class:et(["automation-row",{"is-selected":c.value===o.rowKey}]),role:"button",tabindex:"0",onClick:n=>L(o),onKeydown:[$(k(n=>L(o),["prevent"]),["enter"]),$(k(n=>L(o),["prevent"]),["space"])]},[e("span",{class:"automation-row-icon","data-status":o.automation.status},[o.automation.status==="PAUSED"?(l(),g(x,{key:0})):(l(),g(b,{key:1}))],8,ft),e("span",yt,[e("span",ht,u(o.automation.name),1),e("span",_t,u(o.scopeLabel)+" • "+u(o.targetLabel),1)]),e("span",bt,[e("span",{class:"automation-row-status","data-status":o.automation.status},u(R(o.automation.status)),9,gt),e("span",At,u(o.scheduleLabel),1)]),e("button",{class:"automation-edit-button",type:"button",onClick:k(n=>j(o),["stop"])}," Edit ",8,Et)],42,vt))),128))]),i.value?(l(),m("aside",Lt,[e("div",Ct,[e("span",{class:"automation-detail-icon","data-status":i.value.automation.status},[i.value.automation.status==="PAUSED"?(l(),g(x,{key:0})):(l(),g(b,{key:1}))],8,kt),e("div",wt,[e("h2",null,u(i.value.automation.name),1),e("span",null,u(i.value.scopeLabel),1)]),e("button",{class:"automation-detail-edit",type:"button",onClick:a[0]||(a[0]=o=>j(i.value))}," Edit ")]),e("dl",It,[e("div",null,[a[4]||(a[4]=e("dt",null,"Status",-1)),e("dd",null,u(R(i.value.automation.status)),1)]),e("div",null,[a[5]||(a[5]=e("dt",null,"Schedule",-1)),e("dd",null,u(i.value.scheduleLabel),1)]),e("div",null,[a[6]||(a[6]=e("dt",null,"Target",-1)),e("dd",{title:i.value.targetTitle},u(i.value.targetLabel),9,Rt)]),e("div",null,[a[7]||(a[7]=e("dt",null,"ID",-1)),e("dd",null,u(i.value.automation.id),1)])]),e("section",jt,[a[8]||(a[8]=e("h3",null,"Prompt",-1)),e("p",null,u(i.value.automation.prompt),1)])])):S("",!0)]))]))}}),Nt=ot(Tt,[["__scopeId","data-v-9649732b"]]);export{Nt as default};
+import {
+  d as G,
+  x as v,
+  w as C,
+  b as J,
+  ac as X,
+  ad as Z,
+  o as l,
+  c as m,
+  a as e,
+  t as u,
+  f as S,
+  h as B,
+  ae as b,
+  F as tt,
+  r as at,
+  af as $,
+  q as k,
+  g as et,
+  E as g,
+  ag as x,
+  y as f,
+  _ as ot,
+} from "./index-DaFfIKeO.js";
+const st = { class: "automations-panel" },
+  nt = { class: "automations-toolbar" },
+  ut = { class: "automations-summary" },
+  it = { class: "automations-actions" },
+  lt = ["disabled"],
+  rt = { key: 0, class: "automations-error" },
+  dt = { key: 1, class: "automations-empty" },
+  ct = { key: 2, class: "automations-empty" },
+  mt = { key: 3, class: "automations-layout" },
+  pt = { class: "automations-list", "aria-label": "Automations" },
+  vt = ["onClick", "onKeydown"],
+  ft = ["data-status"],
+  yt = { class: "automation-row-main" },
+  ht = { class: "automation-row-title" },
+  _t = { class: "automation-row-meta" },
+  bt = { class: "automation-row-side" },
+  gt = ["data-status"],
+  At = { class: "automation-row-schedule" },
+  Et = ["onClick"],
+  Lt = {
+    key: 0,
+    class: "automation-detail",
+    "aria-label": "Automation details",
+  },
+  Ct = { class: "automation-detail-heading" },
+  kt = ["data-status"],
+  wt = { class: "automation-detail-title-wrap" },
+  It = { class: "automation-detail-grid" },
+  Rt = ["title"],
+  jt = { class: "automation-detail-prompt" },
+  Tt = G({
+    __name: "AutomationsPanel",
+    props: {
+      groups: {},
+      projectCwdByName: {},
+      projectDisplayNameById: {},
+      selectedAutomationId: {},
+    },
+    emits: ["select-automation", "edit-automation", "create-automation"],
+    setup(U, { expose: F, emit: V }) {
+      const p = U,
+        A = V,
+        w = v({}),
+        I = v({}),
+        y = v(!1),
+        h = v(""),
+        r = v(p.selectedAutomationId ?? ""),
+        c = v(""),
+        Q = f(() => {
+          const t = new Map();
+          for (const a of p.groups)
+            for (const o of a.threads) t.set(o.id, o.title);
+          return t;
+        }),
+        Y = f(() => {
+          var a, o;
+          const t = new Map();
+          for (const n of p.groups) {
+            const s =
+                (a = p.projectCwdByName[n.projectName]) == null
+                  ? void 0
+                  : a.trim(),
+              _ =
+                ((o = p.projectDisplayNameById[n.projectName]) == null
+                  ? void 0
+                  : o.trim()) || n.projectName;
+            s && t.set(s, _);
+          }
+          return t;
+        }),
+        d = f(() => {
+          const t = [];
+          for (const [a, o] of Object.entries(w.value)) {
+            const n = Q.value.get(a) ?? a;
+            for (const s of o)
+              t.push({
+                rowKey: K("thread", a, s.id),
+                automation: s,
+                scope: "thread",
+                scopeLabel: "Heartbeat",
+                targetLabel: n,
+                targetTitle: a,
+                scheduleLabel: N(s),
+              });
+          }
+          for (const [a, o] of Object.entries(I.value)) {
+            const n = Y.value.get(a) ?? q(a);
+            for (const s of o)
+              t.push({
+                rowKey: K("project", a, s.id),
+                automation: s,
+                scope: "project",
+                scopeLabel: "Project",
+                targetLabel: n,
+                targetTitle: a,
+                scheduleLabel: N(s),
+              });
+          }
+          return t.sort((a, o) => {
+            const n = a.automation.status === "ACTIVE" ? 0 : 1,
+              s = o.automation.status === "ACTIVE" ? 0 : 1;
+            if (n !== s) return n - s;
+            const _ = a.automation.createdAtMs ?? 0,
+              M = o.automation.createdAtMs ?? 0;
+            if (_ !== M) return M - _;
+            const P = a.automation.updatedAtMs ?? 0,
+              D = o.automation.updatedAtMs ?? 0;
+            return P !== D
+              ? D - P
+              : a.automation.name.localeCompare(o.automation.name);
+          });
+        }),
+        z = f(
+          () => d.value.filter((t) => t.automation.status === "ACTIVE").length,
+        ),
+        H = f(
+          () => d.value.filter((t) => t.automation.status === "PAUSED").length,
+        ),
+        i = f(
+          () =>
+            d.value.find((t) => t.rowKey === c.value) ??
+            d.value.find((t) => t.automation.id === r.value) ??
+            d.value[0] ??
+            null,
+        );
+      (C(
+        () => p.selectedAutomationId,
+        (t) => {
+          t && ((r.value = t), (c.value = T(t)));
+        },
+      ),
+        C(r, (t) => {
+          t && A("select-automation", t);
+        }),
+        C(d, (t) => {
+          if (t.length === 0) {
+            ((r.value = ""), (c.value = ""));
+            return;
+          }
+          if (!(c.value && t.some((a) => a.rowKey === c.value))) {
+            if (r.value && t.some((a) => a.automation.id === r.value)) {
+              c.value = T(r.value);
+              return;
+            }
+            (!r.value || !t.some((a) => a.automation.id === r.value)) &&
+              ((r.value = t[0].automation.id), (c.value = t[0].rowKey));
+          }
+        }),
+        J(() => {
+          E();
+        }),
+        F({ loadAutomations: E }));
+      async function E() {
+        ((y.value = !0), (h.value = ""));
+        try {
+          const [t, a] = await Promise.all([X(), Z()]);
+          ((w.value = t), (I.value = a));
+        } catch (t) {
+          h.value =
+            t instanceof Error ? t.message : "Failed to load automations";
+        } finally {
+          y.value = !1;
+        }
+      }
+      function R(t) {
+        return t === "PAUSED" ? "Paused" : "Active";
+      }
+      function j(t) {
+        A("edit-automation", {
+          scope: t.scope,
+          target: t.targetTitle,
+          automation: t.automation,
+        });
+      }
+      function O() {
+        A("create-automation");
+      }
+      function L(t) {
+        ((c.value = t.rowKey), (r.value = t.automation.id));
+      }
+      function T(t) {
+        var a;
+        return (
+          ((a = d.value.find((o) => o.automation.id === t)) == null
+            ? void 0
+            : a.rowKey) ?? ""
+        );
+      }
+      function K(t, a, o) {
+        return `${t}:${a}:${o}`;
+      }
+      function N(t) {
+        var o, n;
+        if (t.status === "PAUSED") return "Paused";
+        if (t.nextRunAtMs) return `Next ${W(t.nextRunAtMs)}`;
+        const a = t.rrule.trim();
+        if (/FREQ=MINUTELY/i.test(a)) {
+          const s =
+            ((o = /INTERVAL=(\d+)/i.exec(a)) == null ? void 0 : o[1]) ?? "1";
+          return s === "1" ? "Every minute" : `Every ${s} minutes`;
+        }
+        if (/FREQ=HOURLY/i.test(a)) {
+          const s =
+            ((n = /INTERVAL=(\d+)/i.exec(a)) == null ? void 0 : n[1]) ?? "1";
+          return s === "1" ? "Hourly" : `Every ${s} hours`;
+        }
+        return /FREQ=DAILY/i.test(a)
+          ? "Daily"
+          : /FREQ=WEEKLY/i.test(a)
+            ? "Weekly"
+            : "Custom schedule";
+      }
+      function W(t) {
+        return new Date(t).toLocaleString(void 0, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      }
+      function q(t) {
+        return t.replace(/\/+$/, "").split("/").filter(Boolean).pop() ?? t;
+      }
+      return (t, a) => (
+        l(),
+        m("div", st, [
+          e("div", nt, [
+            e("div", ut, [
+              e("span", null, u(d.value.length) + " total", 1),
+              e("span", null, u(z.value) + " active", 1),
+              e("span", null, u(H.value) + " paused", 1),
+            ]),
+            e("div", it, [
+              e(
+                "button",
+                {
+                  class: "automations-create",
+                  type: "button",
+                  title: "Create a new automation",
+                  onClick: O,
+                },
+                " New automation ",
+              ),
+              e(
+                "button",
+                {
+                  class: "automations-refresh",
+                  type: "button",
+                  disabled: y.value,
+                  onClick: E,
+                },
+                u(y.value ? "Refreshing..." : "Refresh"),
+                9,
+                lt,
+              ),
+            ]),
+          ]),
+          h.value ? (l(), m("p", rt, u(h.value), 1)) : S("", !0),
+          y.value && d.value.length === 0
+            ? (l(),
+              m("div", dt, [
+                B(b, { class: "automations-empty-icon" }),
+                a[1] || (a[1] = e("p", null, "Loading automations...", -1)),
+              ]))
+            : d.value.length === 0
+              ? (l(),
+                m("div", ct, [
+                  B(b, { class: "automations-empty-icon" }),
+                  a[2] || (a[2] = e("p", null, "No automations yet", -1)),
+                  a[3] ||
+                    (a[3] = e(
+                      "span",
+                      null,
+                      "Use a thread or project menu to add an automation.",
+                      -1,
+                    )),
+                ]))
+              : (l(),
+                m("div", mt, [
+                  e("section", pt, [
+                    (l(!0),
+                    m(
+                      tt,
+                      null,
+                      at(
+                        d.value,
+                        (o) => (
+                          l(),
+                          m(
+                            "div",
+                            {
+                              key: o.rowKey,
+                              class: et([
+                                "automation-row",
+                                { "is-selected": c.value === o.rowKey },
+                              ]),
+                              role: "button",
+                              tabindex: "0",
+                              onClick: (n) => L(o),
+                              onKeydown: [
+                                $(
+                                  k((n) => L(o), ["prevent"]),
+                                  ["enter"],
+                                ),
+                                $(
+                                  k((n) => L(o), ["prevent"]),
+                                  ["space"],
+                                ),
+                              ],
+                            },
+                            [
+                              e(
+                                "span",
+                                {
+                                  class: "automation-row-icon",
+                                  "data-status": o.automation.status,
+                                },
+                                [
+                                  o.automation.status === "PAUSED"
+                                    ? (l(), g(x, { key: 0 }))
+                                    : (l(), g(b, { key: 1 })),
+                                ],
+                                8,
+                                ft,
+                              ),
+                              e("span", yt, [
+                                e("span", ht, u(o.automation.name), 1),
+                                e(
+                                  "span",
+                                  _t,
+                                  u(o.scopeLabel) + " • " + u(o.targetLabel),
+                                  1,
+                                ),
+                              ]),
+                              e("span", bt, [
+                                e(
+                                  "span",
+                                  {
+                                    class: "automation-row-status",
+                                    "data-status": o.automation.status,
+                                  },
+                                  u(R(o.automation.status)),
+                                  9,
+                                  gt,
+                                ),
+                                e("span", At, u(o.scheduleLabel), 1),
+                              ]),
+                              e(
+                                "button",
+                                {
+                                  class: "automation-edit-button",
+                                  type: "button",
+                                  onClick: k((n) => j(o), ["stop"]),
+                                },
+                                " Edit ",
+                                8,
+                                Et,
+                              ),
+                            ],
+                            42,
+                            vt,
+                          )
+                        ),
+                      ),
+                      128,
+                    )),
+                  ]),
+                  i.value
+                    ? (l(),
+                      m("aside", Lt, [
+                        e("div", Ct, [
+                          e(
+                            "span",
+                            {
+                              class: "automation-detail-icon",
+                              "data-status": i.value.automation.status,
+                            },
+                            [
+                              i.value.automation.status === "PAUSED"
+                                ? (l(), g(x, { key: 0 }))
+                                : (l(), g(b, { key: 1 })),
+                            ],
+                            8,
+                            kt,
+                          ),
+                          e("div", wt, [
+                            e("h2", null, u(i.value.automation.name), 1),
+                            e("span", null, u(i.value.scopeLabel), 1),
+                          ]),
+                          e(
+                            "button",
+                            {
+                              class: "automation-detail-edit",
+                              type: "button",
+                              onClick: a[0] || (a[0] = (o) => j(i.value)),
+                            },
+                            " Edit ",
+                          ),
+                        ]),
+                        e("dl", It, [
+                          e("div", null, [
+                            a[4] || (a[4] = e("dt", null, "Status", -1)),
+                            e("dd", null, u(R(i.value.automation.status)), 1),
+                          ]),
+                          e("div", null, [
+                            a[5] || (a[5] = e("dt", null, "Schedule", -1)),
+                            e("dd", null, u(i.value.scheduleLabel), 1),
+                          ]),
+                          e("div", null, [
+                            a[6] || (a[6] = e("dt", null, "Target", -1)),
+                            e(
+                              "dd",
+                              { title: i.value.targetTitle },
+                              u(i.value.targetLabel),
+                              9,
+                              Rt,
+                            ),
+                          ]),
+                          e("div", null, [
+                            a[7] || (a[7] = e("dt", null, "ID", -1)),
+                            e("dd", null, u(i.value.automation.id), 1),
+                          ]),
+                        ]),
+                        e("section", jt, [
+                          a[8] || (a[8] = e("h3", null, "Prompt", -1)),
+                          e("p", null, u(i.value.automation.prompt), 1),
+                        ]),
+                      ]))
+                    : S("", !0),
+                ])),
+        ])
+      );
+    },
+  }),
+  Nt = ot(Tt, [["__scopeId", "data-v-9649732b"]]);
+export { Nt as default };
