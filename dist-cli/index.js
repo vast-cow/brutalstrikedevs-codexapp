@@ -9005,12 +9005,13 @@ async function appendThreadQueuedMessage(threadId, message) {
     result: void 0
   }));
 }
-function normalizeReasoningEffort(value) {
-  const allowed = ["none", "minimal", "low", "medium", "high", "xhigh"];
-  return typeof value === "string" && allowed.includes(value) ? value : "";
-}
-function normalizeCollaborationModeReasoningEffort(value) {
-  return value && value.length > 0 ? value : null;
+function normalizeReasoningEffort(value, model) {
+  const supported = Array.isArray(model?.supportedReasoningEfforts)
+    ? model.supportedReasoningEfforts.map((entry) => typeof entry === "string" ? entry : entry?.reasoningEffort).filter((effort) => typeof effort === "string" && effort.trim().length > 0)
+    : [];
+  if (supported.includes(value)) return value;
+  if (supported.includes(model?.defaultReasoningEffort)) return model.defaultReasoningEffort;
+  return supported[0] ?? null;
 }
 function extractLocalImagePathFromUrl(value) {
   if (!value) return null;
@@ -10174,39 +10175,50 @@ var BackendQueueProcessor = class {
       };
     });
   }
-  async resolveCollaborationModeSettings(mode) {
+  async resolveCollaborationModeSettings(mode, providerId) {
     let currentConfig = null;
     try {
       const configPayload = asRecord6(await this.appServer.rpc("config/read", {}));
       currentConfig = asRecord6(configPayload?.config);
     } catch {
-      currentConfig = null;
     }
     const configuredModel = readNonEmptyString(currentConfig?.model);
-    if (configuredModel) {
-      return {
-        model: configuredModel,
-        reasoningEffort: normalizeCollaborationModeReasoningEffort(normalizeReasoningEffort(currentConfig?.model_reasoning_effort))
-      };
-    }
+    const models = [];
     try {
-      const modelsPayload = asRecord6(await this.appServer.rpc("model/list", {}));
-      const models = Array.isArray(modelsPayload?.data) ? modelsPayload.data : [];
-      for (const row of models) {
-        const record = asRecord6(row);
-        const candidate = readNonEmptyString(record?.id) || readNonEmptyString(record?.model);
-        if (candidate) {
-          return {
-            model: candidate,
-            reasoningEffort: normalizeCollaborationModeReasoningEffort(normalizeReasoningEffort(currentConfig?.model_reasoning_effort))
-          };
+      let cursor;
+      const seen = new Set();
+      do {
+        const payload = asRecord6(await this.appServer.rpc("model/list", cursor ? { cursor } : {}));
+        if (Array.isArray(payload?.data)) {
+          for (const row of payload.data) {
+            const record = asRecord6(row);
+            if (readNonEmptyString(record?.id) || readNonEmptyString(record?.model)) models.push(record);
+          }
         }
-      }
+        cursor = readNonEmptyString(payload?.nextCursor);
+        if (!cursor || seen.has(cursor)) break;
+        seen.add(cursor);
+      } while (cursor);
     } catch {
+      models.length = 0;
+    }
+    const model = configuredModel || readNonEmptyString(models[0]?.id) || readNonEmptyString(models[0]?.model);
+    if (model) {
+      // A resumed thread may use a different provider than the current config.
+      const normalizeProvider = (value) => {
+        const provider = (readNonEmptyString(value) || "openai").toLowerCase().replace(/_/g, "-");
+        return provider === "codex" ? "openai" : provider;
+      };
+      const sameProvider = providerId && normalizeProvider(providerId) === normalizeProvider(currentConfig?.model_provider);
+      const capabilities = sameProvider ? models.find((entry) => entry.id === model || entry.model === model) : null;
+      return {
+        model,
+        reasoningEffort: normalizeReasoningEffort(currentConfig?.model_reasoning_effort, capabilities)
+      };
     }
     throw new Error(`${mode === "plan" ? "Plan" : "Default"} mode requires an available model.`);
   }
-  async buildQueuedTurnParams(turn) {
+  async buildQueuedTurnParams(turn, providerId) {
     const localImageAttachments = [];
     for (const imageUrl of turn.message.imageUrls) {
       const localImagePath = extractLocalImagePathFromUrl(imageUrl.trim());
@@ -10244,7 +10256,7 @@ var BackendQueueProcessor = class {
       params.attachments = dedupedFileAttachments.map((f) => ({ label: f.label, path: f.path, fsPath: f.fsPath }));
     }
     try {
-      const settings = await this.resolveCollaborationModeSettings(turn.message.collaborationMode);
+      const settings = await this.resolveCollaborationModeSettings(turn.message.collaborationMode, providerId);
       params.collaborationMode = {
         mode: turn.message.collaborationMode,
         settings: {
@@ -10258,8 +10270,9 @@ var BackendQueueProcessor = class {
     return params;
   }
   async startQueuedTurn(turn) {
-    await this.appServer.rpc("thread/resume", { threadId: turn.threadId });
-    await this.appServer.rpc("turn/start", await this.buildQueuedTurnParams(turn));
+    const resumed = asRecord6(await this.appServer.rpc("thread/resume", { threadId: turn.threadId }));
+    const providerId = readNonEmptyString(resumed?.modelProvider) || readNonEmptyString(asRecord6(resumed?.thread)?.modelProvider);
+    await this.appServer.rpc("turn/start", await this.buildQueuedTurnParams(turn, providerId));
   }
 };
 var MethodCatalog = class {

@@ -7607,12 +7607,6 @@ function Md(e) {
   return "";
 }
 const Hk = 5e3;
-function vc(e) {
-  return e && e.length > 0 ? e : null;
-}
-function gc(e) {
-  return e && e.length > 0 ? e : null;
-}
 let Bl = null,
   al = null;
 const Wk = [
@@ -7799,10 +7793,7 @@ function Ru(e) {
   return Math.max(0, Math.floor(typeof n == "number" ? n : 0));
 }
 function Xk(e) {
-  return typeof e == "string" &&
-    ["none", "minimal", "low", "medium", "high", "xhigh"].includes(e)
-    ? e
-    : "";
+  return typeof e == "string" ? e.trim() : "";
 }
 function Zk(e) {
   return typeof e == "string" && e.trim().toLowerCase() === "fast"
@@ -8565,47 +8556,22 @@ function DT(e) {
   const t = e.replace(/\\/g, "/");
   return t.split("/").filter(Boolean).at(-1) ?? t;
 }
-async function FT(e, t, n) {
-  var d;
-  const r = (t == null ? void 0 : t.trim()) ?? "";
-  if (r) return { model: r, reasoningEffort: e === "plan" ? vc(n) : gc(n) };
-  let o = null;
+async function FT(e, t) {
+  const model = Xk(t);
+  if (model) return model;
   try {
-    o = await $v();
-  } catch {
-    o = null;
-  }
-  const a = (o == null ? void 0 : o.model.trim()) ?? "";
-  if (a)
-    return {
-      model: a,
-      reasoningEffort:
-        e === "plan"
-          ? vc(n ?? (o == null ? void 0 : o.reasoningEffort))
-          : gc(n ?? (o == null ? void 0 : o.reasoningEffort)),
-    };
-  let s = [];
+    const config = await $v();
+    if (config.model.trim()) return config.model.trim();
+  } catch {}
   try {
-    s = await Mv();
-  } catch {
-    s = [];
-  }
-  const u =
-    ((d = s.find((m) => m.trim().length > 0)) == null ? void 0 : d.trim()) ??
-    "";
-  if (u)
-    return {
-      model: u,
-      reasoningEffort:
-        e === "plan"
-          ? vc(n ?? (o == null ? void 0 : o.reasoningEffort))
-          : gc(n ?? (o == null ? void 0 : o.reasoningEffort)),
-    };
+    const catalog = await Mv();
+    if (catalog.ids.length) return catalog.ids[0];
+  } catch {}
   throw new Error(
     `${e === "plan" ? "Plan" : "Default"} mode requires an available model. Wait for models to load and try again.`,
   );
 }
-async function bc(e, t, n = [], r, o, a, s = [], u) {
+async function bc(e, t, n = [], r, o, a, s = [], u, providerId) {
   var d;
   try {
     const m = (r == null ? void 0 : r.trim()) ?? "",
@@ -8637,18 +8603,20 @@ async function bc(e, t, n = [], r, o, a, s = [], u) {
         fsPath: q.fsPath,
       })),
       re = { threadId: e, input: D };
-    if (
-      (F.length > 0 && (re.attachments = F),
-      m && (re.model = m),
-      typeof o == "string" && o.length > 0 && (re.effort = o),
-      u)
-    ) {
-      const q = await FT(u, m, o);
+    if (F.length > 0) re.attachments = F;
+    const model = u ? await FT(u, m) : m;
+    const effort = resolveReasoningEffort(
+      findReasoningModel(model, providerId),
+      o,
+    );
+    if (model) re.model = model;
+    if (effort) re.effort = effort;
+    if (u) {
       re.collaborationMode = {
         mode: u,
         settings: {
-          model: q.model,
-          reasoning_effort: q.reasoningEffort,
+          model,
+          reasoning_effort: effort || null,
           developer_instructions: null,
         },
       };
@@ -8746,20 +8714,90 @@ async function zT(e) {
   } catch {}
   return null;
 }
-async function Mv(e = {}) {
-  const t = e.includeProviderModels !== !1,
-    n = t ? await zT(e.providerId) : null;
-  if ((n != null && n.exclusive) || e.requireProviderModels)
-    return (n == null ? void 0 : n.ids) ?? [];
-  const r = await At("model/list", {}),
-    o = [];
-  for (const a of r.data) {
-    const s = a.id || a.model;
-    !s || o.includes(s) || o.push(s);
+// A catalog belongs to a provider, not just a model name: gateways can reuse IDs.
+const reasoningCatalog = x({ providerId: "", models: [] });
+function reasoningOptions(model) {
+  const entries = model?.supportedReasoningEfforts;
+  if (!Array.isArray(entries)) return [];
+  const options = [];
+  for (const entry of entries) {
+    const value = Xk(
+      typeof entry === "string" ? entry : entry?.reasoningEffort,
+    );
+    if (!value || options.some((option) => option.value === value)) continue;
+    options.push({
+      value,
+      label:
+        value === "xhigh"
+          ? "Extra high"
+          : value[0].toUpperCase() + value.slice(1),
+      description:
+        typeof entry?.description === "string" ? entry.description : "",
+    });
   }
-  if (!t || !n) return o;
-  for (const a of n.ids) o.includes(a) || o.push(a);
-  return o;
+  return options;
+}
+function resolveReasoningEffort(model, requested) {
+  const options = reasoningOptions(model);
+  const supports = (value) => options.some((option) => option.value === value);
+  if (supports(requested)) return requested;
+  const fallback = Xk(model?.defaultReasoningEffort);
+  return supports(fallback) ? fallback : (options[0]?.value ?? "");
+}
+function findReasoningModel(model, providerId) {
+  const catalog = reasoningCatalog.value;
+  if (typeof providerId !== "string" || catalog.providerId !== is(providerId))
+    return null;
+  return (
+    catalog.models.find(
+      (entry) => entry.id === model || entry.model === model,
+    ) ?? null
+  );
+}
+async function Mv(e = {}) {
+  const includeProviders = e.includeProviderModels !== !1;
+  const provider = includeProviders
+    ? await zT(e.providerId === "codex" ? undefined : e.providerId)
+    : null;
+  const exclusive = provider?.exclusive || e.requireProviderModels;
+  const models = [];
+  // model/list describes the configured App Server provider. Do not reuse its
+  // capabilities for a thread on another provider, even when model IDs match.
+  const providerMatches =
+    e.configuredProviderId === undefined ||
+    is(e.providerId ?? e.configuredProviderId) === is(e.configuredProviderId);
+  if (providerMatches) {
+    try {
+      let cursor;
+      const seen = new Set();
+      do {
+        const page = await At("model/list", cursor ? { cursor } : {});
+        if (Array.isArray(page?.data)) {
+          for (const model of page.data) {
+            if (
+              model &&
+              typeof model === "object" &&
+              (Xk(model.id) || Xk(model.model))
+            )
+              models.push(model);
+          }
+        }
+        cursor = Xk(page?.nextCursor);
+        if (!cursor || seen.has(cursor)) break;
+        seen.add(cursor);
+      } while (cursor);
+    } catch {
+      // Failed or partial catalogs must not leave stale capability claims.
+      models.length = 0;
+    }
+  }
+  const ids = exclusive
+    ? [...(provider?.ids ?? [])]
+    : [...new Set(models.map((model) => Xk(model.id) || Xk(model.model)))];
+  if (!exclusive && provider) {
+    for (const id of provider.ids) if (!ids.includes(id)) ids.push(id);
+  }
+  return { ids, models };
 }
 async function $v() {
   const e = await At("config/read", {}),
@@ -17002,6 +17040,7 @@ const wE = { key: 0, class: "thread-composer-dictation-error" },
       models: {},
       selectedModel: {},
       selectedReasoningEffort: {},
+      reasoningEffortOptions: {},
       selectedSpeedMode: {},
       skills: {},
       threadTokenUsage: {},
@@ -17113,14 +17152,7 @@ ${P}`
         V = 0;
       const B = typeof navigator < "u" && /Android/i.test(navigator.userAgent);
       let J = "";
-      const H = [
-        { value: "none", label: "None" },
-        { value: "minimal", label: "Minimal" },
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-        { value: "xhigh", label: "Extra high" },
-      ];
+      const H = Z(() => r.reasoningEffortOptions ?? []);
       function ge(P) {
         return P.trim().replace(/^gpt/i, "GPT");
       }
@@ -18889,15 +18921,24 @@ ${N}`)
                                 {
                                   class: "thread-composer-control",
                                   "model-value": e.selectedReasoningEffort,
-                                  options: H,
-                                  placeholder: T(a)("Thinking"),
+                                  options: H.value,
+                                  placeholder: T(a)(
+                                    H.value.length
+                                      ? "Thinking"
+                                      : "Model default",
+                                  ),
                                   "open-direction": "up",
-                                  disabled: it.value,
+                                  disabled: it.value || H.value.length === 0,
                                   "onUpdate:modelValue": Ao,
                                 },
                                 null,
                                 8,
-                                ["model-value", "placeholder", "disabled"],
+                                [
+                                  "model-value",
+                                  "options",
+                                  "placeholder",
+                                  "disabled",
+                                ],
                               ),
                               e.threadGoal || m.value
                                 ? (C(),
@@ -22204,7 +22245,6 @@ const Wv = "codex-web-local.thread-read-state.v1",
   _p = 2e3,
   MM = 2e3,
   $M = 2e3,
-  kp = ["none", "minimal", "low", "medium", "high", "xhigh"],
   ri = "__global__",
   Yo = "gpt-5.4-mini",
   jM = "muse-spark-1.3-contributor-free",
@@ -23058,7 +23098,7 @@ function S$() {
     U = x(BM()),
     q = x(Gl(re.value, n.value)),
     ee = x(Ap(U.value, n.value)),
-    ae = x("medium"),
+    ae = x(""),
     Te = x("standard"),
     Le = x(""),
     fe = x(""),
@@ -23400,6 +23440,7 @@ function S$() {
           f.skills.length > 0 ? f.skills : void 0,
           f.fileAttachments,
           f.collaborationMode,
+          Vn(i),
         ),
           Or(),
           Ot.add(i),
@@ -23412,8 +23453,24 @@ function S$() {
       }
     }
   }
+  const selectedReasoningModel = Z(() =>
+    findReasoningModel(ut(n.value), Vn(n.value)),
+  );
+  const availableReasoningEfforts = Z(() =>
+    reasoningOptions(selectedReasoningModel.value),
+  );
+  ht(selectedReasoningModel, () => Io(ae.value), {
+    immediate: !0,
+    flush: "sync",
+  });
+  ht(
+    () => Vn(n.value),
+    () => {
+      void ur();
+    },
+  );
   function Io(i) {
-    (i && !kp.includes(i)) || (ae.value = i);
+    ae.value = resolveReasoningEffort(selectedReasoningModel.value, i);
   }
   async function lr(i) {
     const f = i === "fast" ? "fast" : "standard";
@@ -23443,25 +23500,51 @@ function S$() {
       W = Te.value === "fast" ? "Fast" : "Standard";
     return [`Mode: ${L}`, `Model: ${k}`, `Thinking: ${$}`, `Speed: ${W}`];
   }
+  let modelRefreshVersion = 0;
   async function ur(i) {
+    const refreshVersion = ++modelRefreshVersion;
+    const threadId = n.value;
+    const requestedEffort = ae.value;
+    if (
+      i?.providerChanged ||
+      reasoningCatalog.value.providerId !== Vn(n.value)
+    ) {
+      reasoningCatalog.value = { providerId: "", models: [] };
+    }
     fe.value = "";
     try {
-      const f = await $v(),
-        g = f.model.trim(),
+      const f = await $v();
+      if (refreshVersion !== modelRefreshVersion || threadId !== n.value)
+        return;
+      const g = f.model.trim(),
         k = is(f.providerId);
       Le.value = k;
       const $ = Vn(n.value),
         L = $ !== "codex",
         W = ut(n.value),
-        Y = await Mv({
+        catalog = await Mv({
           includeProviderModels:
             L || (i == null ? void 0 : i.includeProviderModels) !== !1,
           requireProviderModels: L,
-          providerId: L ? $ : void 0,
-        }),
+          providerId: $,
+          configuredProviderId: k,
+        });
+      if (
+        refreshVersion !== modelRefreshVersion ||
+        threadId !== n.value ||
+        $ !== Vn(n.value)
+      )
+        return;
+      const Y = catalog.ids,
         se = Wl($),
         pe = se ? Ai(U.value[se]) : "",
         Ye = [...Y];
+      // Discovery failure must not erase a saved/custom model. Its effort
+      // remains unset until that model has confirmed capability metadata.
+      if (Ye.length === 0) {
+        const fallback = (!i?.providerChanged && W) || ($ === k ? g : "");
+        if (fallback) Ye.push(fallback);
+      }
       (!(i != null && i.providerChanged) &&
         L &&
         $ === k &&
@@ -23491,11 +23574,12 @@ function S$() {
         const Tt = Wl(k);
         (Tt && Tt !== se && g && (bt[Tt] = g), (U.value = bt), Vl(U.value));
       }
-      (f.reasoningEffort &&
-        kp.includes(f.reasoningEffort) &&
-        (ae.value = f.reasoningEffort),
-        (Te.value = f.speedMode));
+      reasoningCatalog.value = { providerId: $, models: catalog.models };
+      Io(requestedEffort || f.reasoningEffort);
+      Te.value = f.speedMode;
     } catch (f) {
+      if (refreshVersion !== modelRefreshVersion) return;
+      reasoningCatalog.value = { providerId: "", models: [] };
       Cp(f) ? (fe.value = Tp) : (fe.value = "");
     }
   }
@@ -25525,6 +25609,7 @@ function S$() {
           k.length > 0 ? k : void 0,
           $,
           Y,
+          Vn(i),
         );
       } catch (Bt) {
         if (bt && bt !== Yo && Kl(Bt))
@@ -25547,6 +25632,7 @@ function S$() {
               k.length > 0 ? k : void 0,
               $,
               Y,
+              Vn(i),
             )));
         else throw Bt;
       }
@@ -25833,6 +25919,8 @@ function S$() {
     }
   }
   function $i() {
+    ++modelRefreshVersion;
+    reasoningCatalog.value = { providerId: "", models: [] };
     if (
       (We && (We(), (We = null)),
       (Ue = !1),
@@ -25926,6 +26014,7 @@ function S$() {
     selectedCollaborationMode: q,
     selectedModelId: ee,
     selectedReasoningEffort: ae,
+    availableReasoningEfforts,
     selectedSpeedMode: Te,
     codexCliMissingError: fe,
     installedSkills: I,
@@ -26430,6 +26519,7 @@ const x$ = { class: "sidebar-root" },
           availableModelIds: le,
           selectedCollaborationMode: be,
           selectedReasoningEffort: qe,
+          availableReasoningEfforts,
           selectedSpeedMode: he,
           codexCliMissingError: ie,
           installedSkills: Ne,
@@ -32556,6 +32646,9 @@ const x$ = { class: "sidebar-root" },
                                         models: T(le),
                                         "selected-model": Gt.value,
                                         "selected-reasoning-effort": T(qe),
+                                        "reasoning-effort-options": T(
+                                          availableReasoningEfforts,
+                                        ),
                                         "selected-speed-mode": T(he),
                                         "is-updating-speed-mode": T(nt),
                                         skills: T(Ne),
@@ -32586,6 +32679,7 @@ const x$ = { class: "sidebar-root" },
                                         "models",
                                         "selected-model",
                                         "selected-reasoning-effort",
+                                        "reasoning-effort-options",
                                         "selected-speed-mode",
                                         "is-updating-speed-mode",
                                         "skills",
@@ -32942,6 +33036,10 @@ const x$ = { class: "sidebar-root" },
                                                     "selected-model": Gt.value,
                                                     "selected-reasoning-effort":
                                                       T(qe),
+                                                    "reasoning-effort-options":
+                                                      T(
+                                                        availableReasoningEfforts,
+                                                      ),
                                                     "selected-speed-mode":
                                                       T(he),
                                                     "is-updating-speed-mode":
@@ -32988,6 +33086,7 @@ const x$ = { class: "sidebar-root" },
                                                     "models",
                                                     "selected-model",
                                                     "selected-reasoning-effort",
+                                                    "reasoning-effort-options",
                                                     "selected-speed-mode",
                                                     "is-updating-speed-mode",
                                                     "skills",

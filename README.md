@@ -323,6 +323,15 @@ npm test                      # Formatting, syntax/graph, equivalence, caching, 
 node dist-cli/index.js --no-tunnel
 ```
 
+The new-thread and existing-thread composers use the App Server's
+[`model/list` capabilities](https://developers.openai.com/codex/app-server#list-models-modellist)
+for reasoning effort choices. They preserve `supportedReasoningEfforts` order and
+resolve incompatible selections to `defaultReasoningEffort` when supported, or
+the first supported option. Missing or empty capability metadata disables the
+selector and leaves effort selection to the server. Custom-provider model IDs
+alone do not imply reasoning support, and capabilities are scoped to the provider.
+Direct and queued turns validate explicit efforts before submission.
+
 Run `build:assets` after editing any frontend file, and refresh the browser to see
 changes. The CLI always serves `dist-production/`; it never falls back to readable
 JavaScript. Commit both the editable files and regenerated `dist-production/`.
