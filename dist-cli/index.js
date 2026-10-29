@@ -138,7 +138,7 @@ var APPROVAL_POLICIES = /* @__PURE__ */ new Set([
   "never"
 ]);
 var DEFAULT_RUNTIME_CONFIG = {
-  sandboxMode: "danger-full-access",
+  sandboxMode: void 0,
   approvalPolicy: "never",
   memories: true
 };
@@ -182,8 +182,8 @@ function buildAppServerArgs() {
     "app-server",
     "-c",
     `approval_policy="${config.approvalPolicy}"`,
-    "-c",
-    `sandbox_mode="${config.sandboxMode}"`,
+    ...(config.sandboxMode
+      ? ["-c", `sandbox_mode="${config.sandboxMode}"`] : []),
     "-c",
     `features.memories=${config.memories ? "true" : "false"}`
   ];
@@ -13716,7 +13716,7 @@ async function startServer(options) {
     "  GitHub:   https://github.com/friuns2/codexui",
     "",
     `  Bind:     http://0.0.0.0:${String(port)}`,
-    `  Codex sandbox: ${runtimeConfig.sandboxMode}`,
+    `  Codex sandbox: ${runtimeConfig.sandboxMode ?? "Codex configuration (inherited)"}`,
     `  Approval policy: ${runtimeConfig.approvalPolicy}`
   ];
   const accessUrls = getAccessibleUrls(port);
@@ -13769,7 +13769,7 @@ async function runLogin() {
   console.log("\nStarting `codex login`...\n");
   runOrFail(codexCommand, ["login"], "Codex login");
 }
-program.argument("[projectPath]", "project directory to open on launch").option("--open-project <path>", "open project directory on launch (Codex desktop parity)").option("-p, --port <port>", "port to listen on", "5900").option("--password <pass>", "set a specific password").option("--no-password", "disable password protection").option("--tunnel", "start cloudflared tunnel (disabled by default)", false).option("--no-tunnel", "disable cloudflared tunnel startup").option("--open", "open browser on startup", true).option("--no-open", "do not open browser on startup").option("--login", "run automatic Codex login bootstrap", true).option("--no-login", "skip automatic Codex login bootstrap").option("--memories", "enable Codex memories for spawned app-server processes", true).option("--no-memories", "disable Codex memories for spawned app-server processes").option("--sandbox-mode <mode>", "Codex sandbox mode: read-only, workspace-write, danger-full-access").option("--approval-policy <policy>", "Codex approval policy: untrusted, on-failure, on-request, never").action(async (projectPath, opts) => {
+program.argument("[projectPath]", "project directory to open on launch").option("--open-project <path>", "open project directory on launch (Codex desktop parity)").option("-p, --port <port>", "port to listen on", "5900").option("--password <pass>", "set a specific password").option("--no-password", "disable password protection").option("--tunnel", "start cloudflared tunnel (disabled by default)", false).option("--no-tunnel", "disable cloudflared tunnel startup").option("--open", "open browser on startup", true).option("--no-open", "do not open browser on startup").option("--login", "run automatic Codex login bootstrap", true).option("--no-login", "skip automatic Codex login bootstrap").option("--memories", "enable Codex memories for spawned app-server processes", true).option("--no-memories", "disable Codex memories for spawned app-server processes").option("--sandbox-mode <mode>", "Codex sandbox mode: read-only, workspace-write, danger-full-access (default: inherit Codex configuration)").option("--approval-policy <policy>", "Codex approval policy: untrusted, on-failure, on-request, never").action(async (projectPath, opts) => {
   const rawArgv = process.argv.slice(2);
   const openProjectFlagIndex = rawArgv.findIndex((arg) => arg === "--open-project" || arg.startsWith("--open-project="));
   const memoriesFlagExplicit = rawArgv.some((arg) => arg === "--memories" || arg === "--no-memories" || arg.startsWith("--memories=") || arg.startsWith("--no-memories="));
