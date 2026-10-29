@@ -2,7 +2,7 @@
 
 ### 🚀 Run Codex App UI Anywhere: Linux, Windows, or Termux on Android 🚀
 
-[![npm](https://img.shields.io/npm/v/codexapp?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/codexapp)
+[![npm](https://img.shields.io/npm/v/@brutalstrikedevs/codexapp?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@brutalstrikedevs/codexapp)
 [![platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Android-blue?style=for-the-badge)](#-quick-start)
 [![node](https://img.shields.io/badge/Node-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![license](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](./LICENSE)
@@ -35,17 +35,21 @@ You run one command. It starts a local web server. You open it from your machine
 > **The main event.**
 
 ```bash
-# 🔓 Run instantly (recommended)
-npx codexapp
+# 🔓 Run the prebuilt GitHub distribution (recommended)
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --no-tunnel
 
 # 🌐 Then open in browser
-# http://localhost:18923
+# http://localhost:5900
 ```
+
+These commands select the `brutalstrikedevs-codexapp` GitHub branch explicitly.
+The npm package name is `@brutalstrikedevs/codexapp`; the executable is `codexapp`.
+The default port is `5900`; use `--port <port>` to override it.
 
 By default, `codexapp` starts without a tunnel. Use `--tunnel` to enable a cloudflared tunnel:
 
 ```bash
-npx codexapp --tunnel
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --tunnel
 ```
 
 When enabled, it prints the tunnel URL, terminal QR code, and password together in startup output.
@@ -54,14 +58,14 @@ You can also explicitly disable the tunnel with `--no-tunnel`.
 If you are using a provider or AI gateway that is already authenticated and do not want `codexapp` to force `codex login` during startup, use:
 
 ```bash
-npx codexapp --no-login
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --no-login
 ```
 
 By default, `codexapp` leaves the sandbox mode to Codex's configuration.
 Use `--sandbox-mode` to override it explicitly:
 
 ```bash
-npx codexapp --sandbox-mode workspace-write
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --sandbox-mode workspace-write
 ```
 
 Supported modes are `read-only`, `workspace-write`, and `danger-full-access`.
@@ -70,20 +74,20 @@ You can also set `CODEXUI_SANDBOX_MODE`; the CLI option takes precedence.
 ### Linux 🐧
 ```bash
 node -v   # should be 18+
-npx codexapp
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp
 ```
 
 ### Windows 🪟 (PowerShell)
 ```powershell
 node -v   # 18+
-npx codexapp
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp
 ```
 
 ### Termux (Android) 🤖
 ```bash
 pkg update && pkg upgrade -y
-pkg install nodejs -y
-npx codexapp
+pkg install nodejs git -y
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp
 ```
 
 Android background requirements:
@@ -95,7 +99,7 @@ Android background requirements:
 ```bash
 termux-wake-lock
 ```
-5. Open the shown URL in your Android browser. If the app is killed, return to Termux and run `npx codexapp` again.
+5. Open the shown URL in your Android browser. If the app is killed, return to Termux and run `npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp` again.
 
 ---
 
@@ -106,7 +110,7 @@ If you want to use codexUI from iPhone or iPad Safari, serving it over HTTPS is 
 A practical private setup is to run codexUI locally and publish it inside your tailnet with Tailscale Serve:
 
 ```powershell
-npx codexapp --no-tunnel --port 5900
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp --no-tunnel --port 5900
 tailscale serve --bg 5900
 ```
 
@@ -136,9 +140,9 @@ Notes:
 ## ✨ Features
 > **The payload.**
 
-- 🚀 One-command launch with `npx codexapp`
+- 🚀 One-command launch with `npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp`
 - 🌍 Cross-platform support for Linux, Windows, and Termux on Android
-- 🖥️ Browser-first Codex UI flow on `http://localhost:18923`
+- 🖥️ Browser-first Codex UI flow on `http://localhost:5900`
 - 🌐 LAN-friendly access from other devices on the same network
 - 🧪 Remote/headless-friendly setup for server-based Codex usage
 - 🔌 Works with reverse proxies and tunneling setups
@@ -158,7 +162,7 @@ Set these environment variables before starting `codexapp`:
 export TELEGRAM_BOT_TOKEN="<your-telegram-bot-token>"
 export TELEGRAM_ALLOWED_USER_IDS="<your-telegram-user-id>,<optional-second-id>"
 export TELEGRAM_DEFAULT_CWD="$PWD" # optional, defaults to current working directory
-npx codexapp
+npx --yes --package=github:vast-cow/codex-mobile#brutalstrikedevs-codexapp codexapp
 ```
 
 `TELEGRAM_ALLOWED_USER_IDS` is required for safe access. Only allowlisted Telegram user IDs can use the bridge. If no allowed user IDs are configured, incoming Telegram messages are rejected.
@@ -238,6 +242,7 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ## 🎯 Requirements
 - ✅ Node.js `18+`
+- ✅ Git available on `PATH` for installation from GitHub
 - ✅ Codex app-server environment available
 - ✅ Browser access to host/port
 - ✅ Microphone permission (only for voice dictation)
@@ -252,6 +257,29 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 | `npx` fails | Update npm/node, then retry |
 | Termux install fails | `pkg update && pkg upgrade` then reinstall `nodejs` |
 | Can’t open from other device | Check firewall, bind address, and LAN routing |
+
+---
+
+## Prebuilt distribution and validation
+
+This branch ships compiled `dist/` and `dist-cli/` files with runtime dependencies only.
+Build tools, Vitest, and source development belong in the development checkout.
+Update the compiled files there before bringing a release into this branch.
+There are no automatic build or install hooks in this package; this follows
+[npm's guidance for prebuilt Git dependencies](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#git-urls-as-dependencies).
+
+`node-pty` remains optional. The CLI already repairs broken native-build symlinks
+when loading terminal support and fixes spawn-helper permissions before opening a terminal.
+If native PTY support cannot load, the web UI remains available and reports that the
+integrated terminal is unavailable. For a local installation, you can also run
+`npm run repair:pty` from the package directory to invoke the repair manually.
+
+GitHub Actions checks packaging and installation from the tested GitHub commit with
+npm 10.9.9 and npm 11 on Linux and Windows. It checks CLI help, HTTP delivery of the
+built UI, and a real integrated-terminal command. The HTTP/PTY smoke check uses a
+stand-in for Codex's version check; it does not validate authenticated Codex workflows.
+Termux still requires a device check: run the GitHub command above, open a thread's
+terminal, and verify command input/output, resizing, and closing the terminal.
 
 ---
 
