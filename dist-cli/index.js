@@ -13769,12 +13769,10 @@ async function runLogin() {
   console.log("\nStarting `codex login`...\n");
   runOrFail(codexCommand, ["login"], "Codex login");
 }
-program.argument("[projectPath]", "project directory to open on launch").option("--open-project <path>", "open project directory on launch (Codex desktop parity)").option("-p, --port <port>", "port to listen on", "5900").option("--password <pass>", "set a specific password").option("--no-password", "disable password protection").option("--tunnel", "start cloudflared tunnel (default is auto by Tailscale detection)", true).option("--no-tunnel", "disable cloudflared tunnel startup").option("--open", "open browser on startup", true).option("--no-open", "do not open browser on startup").option("--login", "run automatic Codex login bootstrap", true).option("--no-login", "skip automatic Codex login bootstrap").option("--memories", "enable Codex memories for spawned app-server processes", true).option("--no-memories", "disable Codex memories for spawned app-server processes").option("--sandbox-mode <mode>", "Codex sandbox mode: read-only, workspace-write, danger-full-access").option("--approval-policy <policy>", "Codex approval policy: untrusted, on-failure, on-request, never").action(async (projectPath, opts) => {
+program.argument("[projectPath]", "project directory to open on launch").option("--open-project <path>", "open project directory on launch (Codex desktop parity)").option("-p, --port <port>", "port to listen on", "5900").option("--password <pass>", "set a specific password").option("--no-password", "disable password protection").option("--tunnel", "start cloudflared tunnel (disabled by default)", false).option("--no-tunnel", "disable cloudflared tunnel startup").option("--open", "open browser on startup", true).option("--no-open", "do not open browser on startup").option("--login", "run automatic Codex login bootstrap", true).option("--no-login", "skip automatic Codex login bootstrap").option("--memories", "enable Codex memories for spawned app-server processes", true).option("--no-memories", "disable Codex memories for spawned app-server processes").option("--sandbox-mode <mode>", "Codex sandbox mode: read-only, workspace-write, danger-full-access").option("--approval-policy <policy>", "Codex approval policy: untrusted, on-failure, on-request, never").action(async (projectPath, opts) => {
   const rawArgv = process.argv.slice(2);
   const openProjectFlagIndex = rawArgv.findIndex((arg) => arg === "--open-project" || arg.startsWith("--open-project="));
-  const tunnelFlagExplicit = rawArgv.some((arg) => arg === "--tunnel" || arg === "--no-tunnel" || arg.startsWith("--tunnel=") || arg.startsWith("--no-tunnel="));
   const memoriesFlagExplicit = rawArgv.some((arg) => arg === "--memories" || arg === "--no-memories" || arg.startsWith("--memories=") || arg.startsWith("--no-memories="));
-  const effectiveTunnel = tunnelFlagExplicit ? opts.tunnel : hasDetectedTailscaleIp();
   if (memoriesFlagExplicit) {
     process.env.CODEXUI_MEMORIES = opts.memories ? "true" : "false";
   }
@@ -13802,7 +13800,7 @@ program.argument("[projectPath]", "project directory to open on launch").option(
     }
     opts.approvalPolicy = parsedApprovalPolicy;
   }
-  await startServer({ ...opts, tunnel: effectiveTunnel, projectPath: launchProject });
+  await startServer({ ...opts, projectPath: launchProject });
 });
 program.command("login").description("Install/check Codex CLI and run `codex login`").action(runLogin);
 program.command("help").description("Show codexui command help").action(() => {
