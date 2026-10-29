@@ -21,7 +21,6 @@
 ```
 
 ---
-<img width="1366" height="900" alt="image" src="https://github.com/user-attachments/assets/1a3578ba-add8-49a2-88b4-08195a7f0140" />
 
 ## 🤯 What Is This?
 **`codexapp`** is a lightweight bridge that gives you a browser-accessible UI for Codex app-server workflows.
@@ -205,20 +204,6 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 | 🧰 Headless workflows | Keep terminal + browser split for productivity |
 | 🔌 Custom routing | Put behind reverse proxy/tunnel if needed |
 | ⚡ Fast experiments | `npx` run without full global setup |
-
----
-
-## 🖼️ Screenshots
-
-### Skills Hub
-![Skills Hub](docs/screenshots/skills-hub.png)
-
-### Chat
-![Chat](docs/screenshots/chat.png)
-
-### Mobile UI
-![Skills Hub Mobile](docs/screenshots/skills-hub-mobile.png)
-![Chat Mobile](docs/screenshots/chat-mobile.png)
 
 ---
 
